@@ -1,0 +1,1001 @@
+---
+title: "Company data merged"
+editor: visual
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    fig_caption: true
+    fig_height: 4
+    fig_width: 6
+    keep_tex: false
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = TRUE   
+)
+```
+
+```{r}
+library(readxl)
+library(dplyr)
+library(purrr)
+library(stringr)
+library(janitor)
+library(gdata)
+library(tidyverse)
+library(tidyr)
+library(stringdist)
+library(ggcorrplot)
+```
+
+## Data input and Data cleaning from 2003 to 2023
+```{r}
+df2003 <- read_excel("SB2004_EU500.xlsx", skip = 5, na = "..") %>% clean_names() %>%
+  mutate(year = 2003)
+colnames(df2003) <- c(
+  "rank", "company", "icb_sector", "country",
+
+  "rd_2003_million", "rd_growth_03_02_percent",
+  "rd_growth_02_01_percent", "rd_growth_01_00_percent",
+
+  "sales_2003_million", "sales_growth_03_02_percent",
+  "sales_growth_02_01_percent", "sales_growth_01_00_percent",
+
+  "employees_2003", "employees_growth_03_02_percent",
+
+  "rd_intensity_2003_percent", "rd_intensity_2002_percent",
+
+  "profitability_2003_percent",
+
+  "rd_per_employee_2003_keuro", "rd_per_employee_2002_keuro",
+  "rd_per_employee_cagr_3y_percent",
+
+  "market_cap_2003_million", "market_cap_growth_03_02_percent",
+  "market_cap_cagr_3y_percent",
+
+  "year"
+)
+```
+
+```{r}
+df2004 <- read_excel("SB2005_EU700.xlsx", skip = 4, na = "..") %>%
+  clean_names() %>%
+  mutate(year = 2004)
+
+colnames(df2004) <- c(
+  "rank", "company", "icb_sector", "country",
+
+  "rd_investment_2004_million", 
+  "rd_investment_change_04_03_percent",
+  "rd_investment_change_03_02_percent",
+  "rd_investment_change_02_01_percent",
+
+  "net_sales_2004_million", 
+  "net_sales_change_04_03_percent",
+  "net_sales_change_03_02_percent",
+  "net_sales_change_02_01_percent",
+
+  "employees_2004", 
+  "employees_change_04_03_percent",
+
+  "rd_sales_ratio_2004_percent", 
+  "rd_sales_ratio_2003_percent",
+
+  "operating_profit_2004_percent_of_sales",
+
+  "rd_per_employee_2004_k_euro", 
+  "rd_per_employee_2003_k_euro",
+
+  "market_cap_2004_million", 
+  "market_cap_change_04_03_percent",
+
+  "capex_2004_percent_of_sales",
+  "capex_change_04_03_percent_of_sales",
+
+  "year"
+)
+```
+
+```{r}
+df2005 <- read_excel("SB2006_EU1000.xlsx", skip = 4, na = " ") %>%
+  clean_names() %>%
+  mutate(year = 2005)
+
+colnames(df2005) <- c(
+  "rank", "company", "icb_sector", "country",
+
+  "rd_investment_2005_million", 
+  "rd_investment_change_05_04_%", 
+  "rd_investment_change_04_03_%", 
+  "rd_investment_change_03_02_%",
+
+  "net_sales_2005_million", 
+  "net_sales_change_05_04_%", 
+  "net_sales_change_04_03_%", 
+  "net_sales_change_03_02_%",
+
+  "employees_2005", 
+  "employees_change_05_04_%", 
+
+  "rd_sales_ratio_2005_%", 
+  "rd_sales_ratio_2004_%",
+
+  "operating_profit_2005_%_of_sales",
+
+  "rd_per_employee_2005_ke", 
+  "rd_per_employee_2004_ke",
+
+  "market_cap_2005_million", 
+  "market_cap_change_05_04_%",
+
+  "capex_2005_%_of_sales", 
+  "capex_2004_%_of_sales",
+  
+  "year"
+)
+```
+
+```{r}
+df2006 <- read_excel("SB2007_EU1000.xlsx", skip = 4, na = " ") %>%
+  clean_names() %>%
+  mutate(year = 2006)
+
+colnames(df2006) <- c(
+  "rank", "company", "icb_sector", "country",
+
+  "rd_investment_2006_million", "rd_investment_change_06_05_percent",
+  "rd_investment_change_05_04_percent", "rd_investment_change_04_03_percent",
+
+  "net_sales_2006_million", "net_sales_change_06_05_percent",
+  "net_sales_change_05_04_percent", "net_sales_change_04_03_percent",
+
+  "employees_2006", "employees_change_06_05_percent",
+
+  "rd_sales_ratio_2006_percent", "rd_sales_ratio_2005_percent",
+
+  "operating_profit_2006_percent_of_sales",
+
+  "rd_per_employee_2006_k_euro", "rd_per_employee_2005_k_euro",
+
+  "market_cap_2006_million", "market_cap_change_06_05_percent",
+
+  "capex_2006_percent_of_sales", "capex_2005_percent_of_sales",
+
+  "year"
+)
+```
+
+```{r}
+df2007 <- read_excel("SB2008_EU1000.xlsx", skip = 4, na = " ") %>%
+  clean_names() %>%
+  mutate(year = 2007)
+
+colnames(df2007) <- c(
+  "rank", "company", "icb_sector", "country",
+
+  "rd_investment_2007_million", 
+  "rd_investment_change_07_06_percent", 
+  "rd_investment_change_06_05_percent", 
+  "rd_investment_change_05_04_percent",
+
+  "net_sales_2007_million", 
+  "net_sales_change_07_06_percent", 
+  "net_sales_change_06_05_percent", 
+  "net_sales_change_05_04_percent",
+
+  "employees_2007", 
+  "employees_change_07_06_percent", 
+
+  "rd_sales_ratio_2007_percent", 
+  "rd_sales_ratio_2006_percent",
+
+  "operating_profit_2007_percent_of_sales",
+
+  "rd_per_employee_2007_ke", 
+  "rd_per_employee_2006_ke",
+
+  "market_cap_2007_million","market_cap_change_07_06_percent_of_sales",
+  "capex_2007_percent_of_sales",
+  "capex_2006_percent_of_sales",
+
+  "year"
+)
+```
+
+```{r}
+df2008 <- read_excel("SB2009_EU1000.xlsx", skip = 4, na = " ") %>%
+  clean_names() %>%
+  mutate(year = 2008)
+
+colnames(df2008) <- c(
+  "rank", "company", "icb_sector", "country",
+
+  "rd_investment_2008_million", "rd_investment_change_08_07_percent",
+  "rd_investment_change_07_06_percent", "rd_investment_change_06_05_percent",
+
+  "net_sales_2008_million", "net_sales_change_08_07_percent",
+  "net_sales_change_07_06_percent", "net_sales_change_06_05_percent",
+
+  "employees_2008", "employees_change_08_07_percent",
+
+  "rd_sales_ratio_2008_percent", "rd_sales_ratio_2007_percent",
+
+  "operating_profit_2008_percent_of_sales",
+
+  "rd_per_employee_2008_ke", "rd_per_employee_2007_ke",
+
+  "market_cap_2008_million","market_cap_change_08_07_percent", "capex_2008_percent_of_sales",
+  "capex_2007_percent_of_sales",
+
+  "year"
+)
+```
+
+```{r}
+df2009 <- read_excel("SB2010_EU1000.xlsx", skip = 4, na = " ") %>% clean_names() %>% mutate(year = 2009)
+colnames(df2009) <- c(
+  "rank", "company", "icb_sector", "country",
+  
+  "rd_investment_2009_million", "rd_investment_change_09_08_percent", 
+  "rd_investment_change_08_07_percent", "rd_investment_change_07_06_percent",
+
+  "net_sales_2009_million", "net_sales_change_09_08_percent", 
+  "net_sales_change_08_07_percent", "net_sales_change_07_06_percent",
+
+  "employees_2009", "employees_change_09_08_percent",
+
+  "rd_sales_ratio_2009_percent", "rd_sales_ratio_2008_percent",
+
+  "operating_profit_2009_percent_of_sales",
+
+  "rd_per_employee_2009_k_euro", "rd_per_employee_2008_k_euro",
+
+  "market_cap_2009_million", "market_cap_change_09_08_percent",
+
+  "capex_2009_percent_of_sales", "capex_2008_percent_of_sales",
+
+  "year"
+)
+```
+
+```{r}
+df2010 <- read_excel("SB2011_EU1000.xlsx", skip = 4, na = " ") %>% clean_names() %>% mutate(year = 2010)
+colnames(df2010) <- c(
+  "rank", "company", "icb_sector", "country",
+
+  "rd_2010_million", "rd_growth_1y_percent",
+  "rd_investment_change_09_08_percent", "rd_investment_change_08_07_percent",
+
+  "sales_2010_million", "sales_growth_1y_percent",
+  "sales_change_09_08_percent", "sales_change_08_07_percent",
+
+  "employees_2010", "employees_growth_1y_percent",
+
+  "rd_intensity_percent", "rd_sales_ratio_2009_percent",
+
+  "profitability_percent",
+
+  "rd_per_employee_2010_k_euro", "rd_per_employee_2009_k_euro",
+
+  "market_cap_2010_million", "market_cap_growth_1y_percent",
+
+  "capex_intensity_percent", "capex_2009_percent_of_sales",
+
+  "year"
+)
+```
+
+```{r}
+df2011 <- read_excel("SB2012_EU1000.xlsx", skip = 2, na = " ") %>% clean_names() %>% mutate(year = 2011)
+colnames(df2011) <- c(
+  "rank", "company", "country", "icb_sector",
+
+  "rd_2011_million", "rd_growth_1y_percent", "rd_cagr_3y_percent",
+
+  "sales_2011_million", "sales_growth_1y_percent", "sales_cagr_3y_percent",
+
+  "rd_intensity_percent",
+
+  "capex_2011_million", "capex_growth_1y_percent", "capex_cagr_3y_percent",
+  "capex_intensity_percent",
+
+  "profit_2011_million", "profit_growth_1y_percent", "profit_cagr_3y_percent",
+  "profitability_percent",
+
+  "employees_2011", "employees_growth_1y_percent", "employees_cagr_3y_percent",
+
+  "year"
+)
+```
+
+```{r}
+df2012 <- read_excel("SB2013_EU1000.xlsx", skip = 3, na = " ") %>% clean_names() %>% mutate(year = 2012)
+colnames(df2012) <- c(
+  "rank", "company", "country", "icb_sector",
+
+  "rd_2012_million", "rd_growth_1y_percent", "rd_cagr_3y_percent",
+  "rd_intensity_percent",
+
+  "sales_2012_million", "sales_growth_1y_percent", "sales_cagr_3y_percent",
+
+  "capex_2012_million", "capex_growth_1y_percent", "capex_cagr_3y_percent",
+  "capex_intensity_percent",
+
+  "profit_2012_million", "profit_growth_1y_percent", "profit_cagr_3y_percent",
+  "profitability_percent",
+
+  "employees_2012", "employees_growth_1y_percent", "employees_cagr_3y_percent",
+
+  "year"
+)
+```
+
+```{r}
+df2013 <- read_excel("SB2014_EU1000.xlsx", skip = 1, na = " ") %>% clean_names() %>% mutate(year = 2013)
+colnames(df2013) <- c(
+  "rank", "company", "country", "icb_sector",
+
+  "rd_2013_million", "rd_growth_1y_percent", "rd_cagr_3y_percent",
+  "rd_intensity_percent",
+
+  "sales_2013_million", "sales_growth_1y_percent", "sales_cagr_3y_percent",
+
+  "capex_2013_million", "capex_growth_1y_percent", "capex_cagr_3y_percent",
+  "capex_intensity_percent",
+
+  "profit_2013_million", "profit_growth_1y_percent", "profit_cagr_3y_percent",
+  "profitability_percent",
+
+  "employees_2013", "employees_growth_1y_percent", "employees_cagr_3y_percent",
+
+  "year"
+)
+```
+
+```{r}
+df2014 <- read_excel("SB2015_EU1000.xlsx", skip = 2, na = " ") %>% clean_names() %>% mutate(year = 2014)
+colnames(df2014) <- c(
+  "rank", "company", "country", "icb_sector",
+
+  "rd_2014_million", "rd_growth_1y_percent", "rd_cagr_3y_percent",
+
+  "sales_2014_million", "sales_growth_1y_percent", "sales_cagr_3y_percent",
+
+  "rd_intensity_percent",
+
+  "capex_2014_million", "capex_growth_1y_percent", "capex_cagr_3y_percent", "capex_intensity_percent",
+
+  "profit_2014_million", "profit_growth_1y_percent", "profit_cagr_3y_percent",
+  "profitability_percent",
+
+  "employees_2014", "employees_growth_1y_percent", "employees_cagr_3y_percent",
+
+  "year"
+)
+```
+
+```{r}
+df2015 <- read_excel("SB2016_EU1000.xlsx", skip = 2, na = " ") %>% clean_names() %>% mutate(year = 2015)
+colnames(df2015) <- c(
+  "rank", "company", "country", "icb_sector",
+
+  "rd_2015_million", "rd_growth_1y_percent", "rd_cagr_3y_percent",
+
+  "sales_2015_million", "sales_growth_1y_percent", "sales_cagr_3y_percent",
+
+  "rd_intensity_percent",
+
+  "capex_2015_million", "capex_growth_1y_percent", "capex_cagr_3y_percent", "capex_intensity_percent",
+
+  "profit_2015_million", "profit_growth_1y_percent", "profit_cagr_3y_percent",
+  "profitability_percent",
+
+  "employees_2015", "employees_growth_1y_percent", "employees_cagr_3y_percent",
+
+  "year"
+)
+```
+
+```{r}
+df2016 <- read_excel("SB2017_EU1000.xlsx",  na = " ") %>% clean_names() %>% mutate(year = 2016)
+colnames(df2016) <- c(
+  "rank", "company", "country", "icb_sector",
+
+  "rd_2016_million", "rd_growth_1y_percent",
+
+  "sales_2016_million", "sales_growth_1y_percent",
+
+  "rd_intensity_percent",
+
+  "capex_2016_million", "capex_growth_1y_percent", "capex_intensity_percent",
+
+  "profit_2016_million", "profit_growth_1y_percent", "profitability_percent",
+
+  "employees_2016_thousand", "employees_growth_1y_percent",
+
+  "market_cap_2016_million", "market_cap_growth_1y_percent",
+
+  "year"
+)
+df2016 <- df2016 %>%
+  rename(employees_2016 = employees_2016_thousand) %>%  
+  mutate(employees_2016 = employees_2016 * 1000)        
+```
+
+```{r}
+df2017 <- read_excel("SB2018_EU1000.xlsx",  na = " ") %>% clean_names() %>% mutate(year = 2017)
+colnames(df2017) <- c(
+  "rank", "company", "country", "icb_sector",
+
+  "rd_2017_million", "rd_growth_1y_percent",
+
+  "sales_2017_million", "sales_growth_1y_percent",
+
+  "rd_intensity_percent",
+
+  "capex_2017_million", "capex_growth_1y_percent", "capex_intensity_percent",
+
+  "profit_2017_million", "profit_growth_1y_percent", "profitability_percent",
+
+  "employees_2017", "employees_growth_1y_percent",
+
+  "market_cap_2017_million", "market_cap_growth_1y_percent",
+
+  "year"
+)
+```
+
+```{r}
+df2018 <- read_excel("SB2019_EU1000.xlsx",  na = " ") %>% clean_names() %>% mutate(year = 2018)
+colnames(df2018) <- c(
+  "rank", "company", "country", "icb_sector",
+
+  "rd_2018_million", "rd_growth_1y_percent",
+
+  "sales_2018_million", "sales_growth_1y_percent",
+
+  "rd_intensity_percent",
+
+  "capex_2018_million", "capex_growth_1y_percent", "capex_intensity_percent",
+
+  "profit_2018_million", "profit_growth_1y_percent", "profitability_percent",
+
+  "employees_2018", "employees_growth_1y_percent",
+
+  "market_cap_2018_million", "market_cap_growth_1y_percent",
+
+  "year"
+)
+```
+
+```{r}
+df2019 <- read_excel("SB2020_EU+UK1000.xlsx",  na = " ") %>% clean_names() %>% mutate(year = 2019)
+colnames(df2019) <- c(
+  "rank", "company", "country", "region", "icb_sector",
+
+  "rd_2019_million", "rd_growth_1y_percent",
+
+  "sales_2019_million", "sales_growth_1y_percent",
+
+  "rd_intensity_percent",
+
+  "capex_2019_million", "capex_growth_1y_percent", "capex_intensity_percent",
+
+  "profit_2019_million", "profit_growth_1y_percent", "profitability_percent",
+
+  "employees_2019", "employees_growth_1y_percent",
+
+  "market_cap_2019_million", "market_cap_growth_1y_percent",
+
+  "year"
+)
+```
+
+```{r}
+df2020 <- read_excel("SB2021_EU1000.xlsx",  na = " ") %>% clean_names() %>% mutate(year = 2020)
+colnames(df2020) <- c(
+  "rank", "company", "country", "region", "icb_sector",
+
+  "rd_2020_million", "rd_growth_1y_percent",
+
+  "sales_2020_million", "sales_growth_1y_percent",
+
+  "rd_intensity_percent",
+
+  "capex_2020_million", "capex_growth_1y_percent", "capex_intensity_percent",
+
+  "profit_2020_million", "profit_growth_1y_percent", "profitability_percent",
+
+  "employees_2020", "employees_growth_1y_percent",
+
+  "market_cap_2020_million", "market_cap_growth_1y_percent",
+
+  "year"
+)
+```
+
+```{r}
+df2021 <- read_excel("SB2022_EU1000.xlsx",  na = " ") %>% clean_names() %>% mutate(year = 2021)
+colnames(df2021) <- c(
+  "rank", "company", "country", "region", "icb_sector",
+
+  "rd_2021_million", "rd_growth_1y_percent",
+
+  "sales_2021_million", "sales_growth_1y_percent",
+
+  "rd_intensity_percent",
+
+  "capex_2021_million", "capex_growth_1y_percent", "capex_intensity_percent",
+
+  "profit_2021_million", "profit_growth_1y_percent", "profitability_percent",
+
+  "employees_2021", "employees_growth_1y_percent",
+
+  "market_cap_2021_million", "market_cap_growth_1y_percent",
+
+  "year"
+)
+```
+
+```{r}
+df2022 <- read_excel("SB2023_EU1000.xlsx",  na = " ") %>% clean_names()
+colnames(df2022) <- c(
+  "rank", "company", "year", "country", "region", "icb_sector",
+
+  "rd_2022_million", "rd_growth_1y_percent",
+
+  "sales_2022_million", "sales_growth_1y_percent",
+
+  "rd_intensity_percent",
+
+  "capex_2022_million", "capex_growth_1y_percent", "capex_intensity_percent",
+
+  "profit_2022_million", "profit_growth_1y_percent", "profitability_percent",
+
+  "employees_2022", "employees_growth_1y_percent",
+
+  "market_cap_2022_million", "market_cap_growth_1y_percent"
+)
+```
+
+```{r}
+df2023 <- read_excel("SB2024_EU800.xlsx",  na = " ") %>% clean_names() 
+colnames(df2023) <- c(
+  "rank", "company", "year", "country", "region", "icb_sector",
+
+  "rd_2023_million", "rd_growth_1y_percent",
+
+  "sales_2023_million", "sales_growth_1y_percent",
+
+  "rd_intensity_percent",
+
+  "capex_2023_million", "capex_growth_1y_percent", "capex_intensity_percent",
+
+  "profit_2023_million", "profit_growth_1y_percent", "profitability_percent",
+
+  "market_cap_2023_million", "market_cap_growth_1y_percent",
+
+  "employees_2023", "employees_growth_1y_percent"
+)
+```
+
+## Check the company
+```{r}
+list_of_dfs <- list( df2003,df2004,df2005, df2006, df2007, df2008, df2009,
+                    df2010, df2011, df2012, df2013, df2014, df2015, df2016,
+                    df2017, df2018, df2019, df2020, df2021, df2022, df2023)
+
+
+list_of_dfs <- lapply(list_of_dfs, function(df) {
+  df %>% mutate(company = toupper(company))
+})
+
+company_years <- lapply(list_of_dfs, function(df) {
+  df %>% select(company, year) %>% distinct()
+}) %>% bind_rows()
+
+company_counts <- company_years %>%
+  group_by(company) %>%
+  summarise(n_years = n()) %>%
+  arrange(desc(n_years))
+
+consistent_companies <- company_counts %>%
+  filter(n_years == 21)
+```
+To identify firms consistently present in the R&D rankings from 2003 to 2023, I merged annual datasets and standardized company names. Only 124 companies appeared in all 21 years. This small sample size limits the feasibility of in-depth statistical or econometric analysis, especially when further segmented by country, industry, or other variables.
+
+## Company Persistence Analysis
+```{r}
+company_by_year <- lapply(list_of_dfs, function(df) {
+  df %>% mutate(company = toupper(company)) %>% select(company, year) %>% distinct()
+}) %>% bind_rows()
+
+all_years <- sort(unique(company_by_year$year))
+
+window_size <- 10
+
+results <- list()
+
+for (i in 1:(length(all_years) - window_size + 1)) {
+  years_window <- all_years[i:(i + window_size - 1)]
+
+  filtered <- company_by_year %>% filter(year %in% years_window)
+  common_companies <- filtered %>%
+    group_by(company) %>%
+    summarise(n_years = n()) %>%
+    filter(n_years == window_size)
+
+  results[[i]] <- tibble(
+    start_year = years_window[1],
+    end_year = years_window[window_size],
+    common_company_count = nrow(common_companies)
+  )
+}
+
+window_stats <- bind_rows(results)
+window_stats %>% filter(common_company_count >= 400) %>%
+  arrange(desc(common_company_count))
+```
+To identify a robust analysis window, I applied a 10-year rolling window to the data from 2003 to 2023. For each window, I counted the number of companies consistently present in all 10 years. Among the options, the period 2010–2019 had the highest count with 417 consistent companies, providing a sufficiently large and stable sample. Therefore, I selected 2010–2019 as the target window for further analysis.
+
+```{r}
+target_years <- 2010:2019
+company_years_target <- company_by_year %>%
+  filter(year %in% target_years)
+common_companies_10y <- company_years_target %>%
+  group_by(company) %>%
+  summarise(n_years = n()) %>%
+  filter(n_years == length(target_years)) %>%
+  pull(company)
+```
+To identify firms consistently present from 2010 to 2019, I filtered the data to include only those years and counted the number of appearances for each company. Companies with records in all 10 years were selected as the final sample for analysis.
+
+## Merged data
+```{r}
+dfs <- list(df2010, df2011, df2012, df2013, df2014,
+            df2015, df2016, df2017, df2018, df2019)
+
+dfs <- lapply(dfs, function(df) {
+  df %>%
+    mutate(company = toupper(company)) %>%
+    filter(company %in% common_companies_10y) |> 
+    select(-year) 
+})
+
+dfs_named <- map2(dfs, target_years, function(df, y) {
+  df %>%
+    rename_with(~ paste0(., "_", y), .cols = -company)
+})
+
+wide_data <- reduce(dfs_named, ~ left_join(.x, .y, by = "company"))
+```
+
+```{r}
+wide_data <- wide_data %>%
+  mutate(across(where(~ !is.factor(.)), as.character)) %>%
+  { meta <- select(., company, matches("^(rank|country|icb_sector|region|rd_growth_1y_percent|sales_growth_1y_percent|rd_intensity_percent|capex_intensity_percent|profitability_percent|employees_growth_1y_percent)_\\d{4}$")) %>%
+      pivot_longer(
+        cols = -company,
+        names_to = c("variable", "year"),
+        names_pattern = "^(.*)_(\\d{4})$",
+        values_to = "value"
+      ) %>%
+      pivot_wider(names_from = variable, values_from = value) %>%
+      mutate(year = as.integer(year))
+
+    rd <- select(., company, matches("^rd_\\d{4}_million_\\d{4}$")) %>%
+      pivot_longer(
+        cols = -company,
+        names_to = "year",
+        names_pattern = "^rd_\\d{4}_million_(\\d{4})$",
+        values_to = "rd_million"
+      ) %>%
+      mutate(year = as.integer(year))
+    
+    sales <- select(., company, matches("^sales_\\d{4}_million_\\d{4}$")) %>%
+      pivot_longer(
+        cols = -company,
+        names_to = "year",
+        names_pattern = "^sales_\\d{4}_million_(\\d{4})$",
+        values_to = "sales_million"
+      ) %>%
+      mutate(year = as.integer(year))
+
+    employees <- select(., company, matches("^employees_\\d{4}_\\d{4}$")) %>%
+      pivot_longer(
+        cols = -company,
+        names_to = "year",
+        names_pattern = "^employees_\\d{4}_(\\d{4})$",
+        values_to = "employees"
+      ) %>%
+      mutate(year = as.integer(year))
+    
+    capex <- select(., company, matches("^capex_\\d{4}_million_\\d{4}$")) %>%
+      pivot_longer(
+        cols = -company,
+        names_to = "year",
+        names_pattern = "^capex_\\d{4}_million_(\\d{4})$",
+        values_to = "capex_million"
+      ) %>%
+      mutate(year = as.integer(year))
+
+    capex_growth <- select(., company, matches("^capex_growth_1y_percent_\\d{4}$")) %>%
+      pivot_longer(
+        cols = -company,
+        names_to = "year",
+        names_pattern = "^capex_growth_1y_percent_(\\d{4})$",
+        values_to = "capex_growth_1y_percent"
+      ) %>%
+      mutate(year = as.integer(year))
+
+    profit <- select(., company, matches("^profit_\\d{4}_million_\\d{4}$")) %>%
+      pivot_longer(
+        cols = -company,
+        names_to = "year",
+        names_pattern = "^profit_\\d{4}_million_(\\d{4})$",
+        values_to = "profit_million"
+      ) %>%
+      mutate(year = as.integer(year))
+
+    profit_growth <- select(., company, matches("^profit_growth_1y_percent_\\d{4}$")) %>%
+      pivot_longer(
+        cols = -company,
+        names_to = "year",
+        names_pattern = "^profit_growth_1y_percent_(\\d{4})$",
+        values_to = "profit_growth_1y_percent"
+      ) %>%
+      mutate(year = as.integer(year))
+
+    market_cap <- select(., company, matches("^market_cap_\\d{4}_million_\\d{4}$")) %>%
+      pivot_longer(
+        cols = -company,
+        names_to = "year",
+        names_pattern = "^market_cap_\\d{4}_million_(\\d{4})$",
+        values_to = "market_cap_million"
+      ) %>%
+      mutate(year = as.integer(year))
+
+    market_cap_growth <- select(., company, matches("^market_cap_growth_1y_percent_\\d{4}$")) %>%
+      pivot_longer(
+        cols = -company,
+        names_to = "year",
+        names_pattern = "^market_cap_growth_1y_percent_(\\d{4})$",
+        values_to = "market_cap_growth_1y_percent"
+      ) %>%
+      mutate(year = as.integer(year))
+
+    others <- select(., -matches("^(rank|country|icb_sector|region|rd_\\d{4}_million|sales_\\d{4}_million|employees_\\d{4}|rd_growth_1y_percent|sales_growth_1y_percent|rd_intensity_percent|capex_intensity_percent|profitability_percent|employees_growth_1y_percent|capex_\\d{4}_million|capex_growth_1y_percent|profit_\\d{4}_million|profit_growth_1y_percent|market_cap_\\d{4}_million|market_cap_growth_1y_percent)_\\d{4}$"))
+
+    long_data <- reduce(
+      list(meta, rd, sales, employees, capex, capex_growth, profit, profit_growth, market_cap, market_cap_growth),
+      ~ full_join(.x, .y, by = c("company", "year"))
+    )
+
+    left_join(long_data, others, by = "company")
+  }
+
+wide_data <- wide_data %>%
+  select(
+    -all_of(c(
+      "rd_investment_change_09_08_percent_2010",
+      "rd_investment_change_08_07_percent_2010",
+      "sales_change_09_08_percent_2010",
+      "sales_change_08_07_percent_2010",
+      "rd_per_employee_2010_k_euro_2010",
+      "rd_per_employee_2009_k_euro_2010",
+      "rd_sales_ratio_2009_percent_2010",
+      "capex_2009_percent_of_sales_2010" 
+    )),
+    -matches("^(rd|sales|capex|profit|employees)_cagr_3y_percent_\\d{4}$")
+  )
+```
+
+```{r}
+wide_data <- wide_data %>%
+  mutate(region = ifelse(is.na(region), "EU", region)) %>%
+  select(
+    company, year, region, country, icb_sector, rank,
+    rd_million, rd_growth_1y_percent, rd_intensity_percent,
+    sales_million, sales_growth_1y_percent,
+    employees, employees_growth_1y_percent,
+    capex_million, capex_growth_1y_percent, capex_intensity_percent,
+    profit_million, profit_growth_1y_percent, profitability_percent,
+    market_cap_million, market_cap_growth_1y_percent
+  )
+
+wide_data <- wide_data %>%
+  mutate(
+    company = as.character(company),
+    region = as.factor(region),
+    country = as.factor(country),
+    icb_sector = as.factor(icb_sector),
+
+    across(
+      .cols = c(
+        rank,
+        rd_million, rd_growth_1y_percent, rd_intensity_percent,
+        sales_million, sales_growth_1y_percent,
+        employees, employees_growth_1y_percent,
+        capex_million, capex_growth_1y_percent, capex_intensity_percent,
+        profit_million, profit_growth_1y_percent, profitability_percent,
+        market_cap_million, market_cap_growth_1y_percent
+      ),
+      .fns = ~ as.numeric(.)
+    ),
+    year = as.integer(year)
+  )
+wide_data <- wide_data %>%
+  mutate(
+    icb_sector = gsub("\\s*\\([^\\)]+\\)", "", icb_sector), 
+    icb_sector = str_trim(icb_sector) 
+  )
+wide_data <- wide_data %>%
+  mutate(icb_sector = icb_sector %>%
+           str_to_title() %>%
+           str_trim() %>%
+           str_squish())
+
+wide_data <- wide_data %>%
+  mutate(icb_sector = case_when(
+    icb_sector == "Aerospace & Defence" ~ "Aerospace & Defense",
+    icb_sector == "Gas, Water & Multiutilities" ~ "Gas, Water & Multi-Utilities",
+    TRUE ~ icb_sector
+  ))
+
+```
+I constructed a balanced panel dataset for the period 2010–2019 by selecting companies that appeared in all ten years. I merged company-level data across years and reshaped key variables (e.g., R&D, sales, employees) into long format. I removed redundant or irrelevant columns, set missing region values to "EU", and reordered the variables to facilitate further analysis.
+
+## Descriptive analysia
+
+1.Number of companies by country
+```{r}
+company_count_country <- wide_data %>%
+  group_by(country) %>%
+  summarise(n_companies = n_distinct(company)) %>%
+  arrange(desc(n_companies))
+
+ggplot(company_count_country, aes(x = reorder(country, n_companies), y = n_companies)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = n_companies), hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  labs(
+    title = "Number of Companies by Country",
+    x = "Country",
+    y = "Number of Companies"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +  
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))  
+```
+The bar chart shows the number of companies per country that consistently appeared in the EU R&D ranking from 2010 to 2019. Germany leads with 107 firms, followed by the UK (77), France (56), and Sweden (34). These top contributors reflect the strong and stable innovation presence of these countries in the EU during this decade. Other countries like Italy, Finland, and Denmark also maintain a noticeable presence, while the remaining countries contribute relatively fewer consistent players.
+
+2.Number of companies by industry (ICB sector)
+```{r}
+
+company_count_industry <- wide_data %>%
+  group_by(icb_sector) %>%
+  summarise(n_companies = n_distinct(company)) %>%
+  arrange(desc(n_companies))
+
+ggplot(company_count_industry, aes(x = reorder(icb_sector, n_companies), y = n_companies)) +
+  geom_segment(aes(xend = icb_sector, y = 0, yend = n_companies), color = "gray70") +
+  geom_point(color = "darkgreen", size = 3) +
+  geom_text(aes(label = n_companies), hjust = -0.8, size = 3.2) + 
+  coord_flip() +
+  labs(
+    title = "Number of Companies by Industry (ICB Sector)",
+    x = "ICB Sector",
+    y = "Number of Companies"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.text.y = element_text(size = 7)
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.2)))  
+
+```
+The dot plot illustrates the number of companies in each ICB sector that consistently appeared in the EU R&D rankings from 2010 to 2019. The leading sectors are Industrial Engineering (57 firms), Industrial Machinery (47), and Pharmaceuticals & Biotechnology (44), highlighting the central role of these sectors in sustained innovation.
+
+3.Average number of employees and net sales over time
+```{r}
+avg_stats <- wide_data %>%
+  group_by(year) %>%
+  summarise(
+    avg_employees = mean(employees, na.rm = TRUE),
+    avg_sales = mean(sales_million, na.rm = TRUE)
+  )
+
+ggplot(avg_stats, aes(x = year, y = avg_employees)) +
+  geom_line(color = "blue", size = 1.2) +
+  labs(title = "Average Number of Employees Over Time", x = "Year", y = "Employees") +
+  scale_x_continuous(breaks = avg_stats$year) +  
+  theme_minimal()
+
+ggplot(avg_stats, aes(x = year, y = avg_sales)) +
+  geom_line(color = "purple", size = 1.2) +
+  labs(title = "Average Net Sales Over Time", x = "Year", y = "Net Sales (Million €)") +
+  scale_x_continuous(breaks = avg_stats$year) + 
+  theme_minimal()
+```
+Employees:
+The average number of employees remained relatively stable until around 2015, with minor fluctuations.
+From 2016 onwards, there was a noticeable increase in employment, indicating that firms were scaling up operations.
+This may reflect not just recovery but also structural growth in the industries covered.
+
+Net Sales:
+The average net sales showed steady growth from 2010 to 2012, followed by fluctuations between 2013 and 2016.
+After 2016, net sales increased consistently and significantly, peaking in 2019.
+This trend suggests a post-crisis recovery and a likely expansion period in the EU corporate landscape during the late 2010s.
+
+4.Analyze Rank Stability Across Companies (2010–2019):
+```{r}
+wide_data <- wide_data %>%
+  mutate(rank = as.numeric(rank))
+rank_stability <- wide_data %>%
+  group_by(company) %>%
+  summarise(
+    avg_rank = mean(rank, na.rm = TRUE),  
+    sd_rank = sd(rank, na.rm = TRUE)     
+  ) %>%
+  arrange(sd_rank)  
+
+head(rank_stability, 10)
+
+top_stable <- rank_stability %>% slice_min(sd_rank, n = 20)
+
+ggplot(top_stable, aes(x = reorder(company, sd_rank), y = sd_rank)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Top 20 Most Stable Companies by Rank (2010–2019)",
+    x = "Company",
+    y = "Standard Deviation of Rank"
+  ) +
+  theme_minimal()
+```
+As shown in the chart, Volkswagen stands out with the most stable position, consistently ranked first across the entire period (SD = 0). Other firms like Daimler, Siemens, and Robert Bosch also show strong rank stability, indicating sustained investment and leadership in R&D.
+
+On the other hand, companies such as Nokia, Evonik Industries, and L’Oréal demonstrate relatively higher rank variability, reflecting either fluctuations in R&D spending or changes in their relative position in the European innovation landscape.
+
+This analysis highlights a core group of firms with long-term commitment to R&D, which can be important for further modeling or policy discussion regarding consistent innovation performance.
+
+```{r}
+cor_data <- wide_data %>%
+  select(
+    rd_million, rd_growth_1y_percent, rd_intensity_percent,
+    sales_million, sales_growth_1y_percent,
+    employees, employees_growth_1y_percent,
+    capex_million, capex_growth_1y_percent, capex_intensity_percent,
+    profit_million, profit_growth_1y_percent, profitability_percent,
+    market_cap_million, market_cap_growth_1y_percent,rank
+  ) %>%
+  drop_na()  
+cor_matrix <- cor(cor_data, use = "complete.obs")
+ggcorrplot(
+  cor_matrix,
+  method = "circle",
+  type = "lower",
+  lab = TRUE,
+  lab_size = 3,
+  colors = c("red", "white", "blue"),
+  title = "Correlation Matrix of Key Firm-Level Variables",
+  ggtheme = theme_minimal()
+)
+```
+R&D and Net Sales:
+There is a moderate positive correlation between R&D expenditure (rd_million) and net sales (sales_million) at 0.58, suggesting that firms with higher R&D investment tend to achieve higher sales revenue.
+Similarly, R&D is positively correlated with the number of employees (employees, 0.61), indicating that R&D-intensive firms typically have larger workforces.
+
+Profit and Market Capitalization:
+The correlation between profit (profit_million) and market capitalization (market_cap_million) is 0.75, showing that more profitable firms generally have higher market value.
+
+Capital Expenditure and Sales:
+Capital expenditure (capex_million) shows a strong positive correlation with net sales (sales_million) at 0.88, suggesting that firms with higher sales volumes are also more likely to make substantial capital investments.
+
+Negative Correlations with Rank:
+The variable rank (where a lower number indicates a better ranking) is negatively correlated with key performance indicators like R&D, sales, and employees. This aligns with expectations—top-ranked firms tend to have more resources, higher output, and greater investment in R&D.

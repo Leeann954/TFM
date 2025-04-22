@@ -1,16 +1,13 @@
 ---
-title: "Company data merged"
+title: "TFM data merged"
 editor: visual
-output:
-  pdf_document:
+output: 
+  html_document:
+    self_contained: true
     toc: true
-    toc_depth: 2
-    number_sections: true
-    fig_caption: true
-    fig_height: 4
-    fig_width: 6
-    keep_tex: false
+    toc_float: true
 ---
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   warning = FALSE,
@@ -21,7 +18,7 @@ knitr::opts_chunk$set(
 
 ```{r}
 library(readxl)
-library(dplyr)
+library(dplyr) 
 library(purrr)
 library(stringr)
 library(janitor)
@@ -30,9 +27,13 @@ library(tidyverse)
 library(tidyr)
 library(stringdist)
 library(ggcorrplot)
+library(ggplot2)
+library(mice)
+library(missForest)
 ```
 
 ## Data input and Data cleaning from 2003 to 2023
+
 ```{r}
 df2003 <- read_excel("SB2004_EU500.xlsx", skip = 5, na = "..") %>% clean_names() %>%
   mutate(year = 2003)
@@ -584,6 +585,7 @@ colnames(df2023) <- c(
 ```
 
 ## Check the company
+
 ```{r}
 list_of_dfs <- list( df2003,df2004,df2005, df2006, df2007, df2008, df2009,
                     df2010, df2011, df2012, df2013, df2014, df2015, df2016,
@@ -606,9 +608,11 @@ company_counts <- company_years %>%
 consistent_companies <- company_counts %>%
   filter(n_years == 21)
 ```
+
 To identify firms consistently present in the R&D rankings from 2003 to 2023, I merged annual datasets and standardized company names. Only 124 companies appeared in all 21 years. This small sample size limits the feasibility of in-depth statistical or econometric analysis, especially when further segmented by country, industry, or other variables.
 
 ## Company Persistence Analysis
+
 ```{r}
 company_by_year <- lapply(list_of_dfs, function(df) {
   df %>% mutate(company = toupper(company)) %>% select(company, year) %>% distinct()
@@ -640,6 +644,7 @@ window_stats <- bind_rows(results)
 window_stats %>% filter(common_company_count >= 400) %>%
   arrange(desc(common_company_count))
 ```
+
 To identify a robust analysis window, I applied a 10-year rolling window to the data from 2003 to 2023. For each window, I counted the number of companies consistently present in all 10 years. Among the options, the period 2010–2019 had the highest count with 417 consistent companies, providing a sufficiently large and stable sample. Therefore, I selected 2010–2019 as the target window for further analysis.
 
 ```{r}
@@ -652,9 +657,11 @@ common_companies_10y <- company_years_target %>%
   filter(n_years == length(target_years)) %>%
   pull(company)
 ```
+
 To identify firms consistently present from 2010 to 2019, I filtered the data to include only those years and counted the number of appearances for each company. Companies with records in all 10 years were selected as the final sample for analysis.
 
 ## Merged data
+
 ```{r}
 dfs <- list(df2010, df2011, df2012, df2013, df2014,
             df2015, df2016, df2017, df2018, df2019)
@@ -845,13 +852,18 @@ wide_data <- wide_data %>%
     icb_sector == "Gas, Water & Multiutilities" ~ "Gas, Water & Multi-Utilities",
     TRUE ~ icb_sector
   ))
-
+wide_data$country <- as.character(wide_data$country)  
+wide_data$country <- ifelse(wide_data$country == "The Netherlands", 
+                            "Netherlands", 
+                            wide_data$country)
 ```
+
 I constructed a balanced panel dataset for the period 2010–2019 by selecting companies that appeared in all ten years. I merged company-level data across years and reshaped key variables (e.g., R&D, sales, employees) into long format. I removed redundant or irrelevant columns, set missing region values to "EU", and reordered the variables to facilitate further analysis.
 
 ## Descriptive analysia
 
 1.Number of companies by country
+
 ```{r}
 company_count_country <- wide_data %>%
   group_by(country) %>%
@@ -871,9 +883,11 @@ ggplot(company_count_country, aes(x = reorder(country, n_companies), y = n_compa
   theme(plot.title = element_text(hjust = 0.5)) +  
   scale_y_continuous(expand = expansion(mult = c(0, 0.1)))  
 ```
+
 The bar chart shows the number of companies per country that consistently appeared in the EU R&D ranking from 2010 to 2019. Germany leads with 107 firms, followed by the UK (77), France (56), and Sweden (34). These top contributors reflect the strong and stable innovation presence of these countries in the EU during this decade. Other countries like Italy, Finland, and Denmark also maintain a noticeable presence, while the remaining countries contribute relatively fewer consistent players.
 
 2.Number of companies by industry (ICB sector)
+
 ```{r}
 
 company_count_industry <- wide_data %>%
@@ -899,9 +913,11 @@ ggplot(company_count_industry, aes(x = reorder(icb_sector, n_companies), y = n_c
   scale_y_continuous(expand = expansion(mult = c(0, 0.2)))  
 
 ```
+
 The dot plot illustrates the number of companies in each ICB sector that consistently appeared in the EU R&D rankings from 2010 to 2019. The leading sectors are Industrial Engineering (57 firms), Industrial Machinery (47), and Pharmaceuticals & Biotechnology (44), highlighting the central role of these sectors in sustained innovation.
 
 3.Average number of employees and net sales over time
+
 ```{r}
 avg_stats <- wide_data %>%
   group_by(year) %>%
@@ -922,17 +938,13 @@ ggplot(avg_stats, aes(x = year, y = avg_sales)) +
   scale_x_continuous(breaks = avg_stats$year) + 
   theme_minimal()
 ```
-Employees:
-The average number of employees remained relatively stable until around 2015, with minor fluctuations.
-From 2016 onwards, there was a noticeable increase in employment, indicating that firms were scaling up operations.
-This may reflect not just recovery but also structural growth in the industries covered.
 
-Net Sales:
-The average net sales showed steady growth from 2010 to 2012, followed by fluctuations between 2013 and 2016.
-After 2016, net sales increased consistently and significantly, peaking in 2019.
-This trend suggests a post-crisis recovery and a likely expansion period in the EU corporate landscape during the late 2010s.
+Employees: The average number of employees remained relatively stable until around 2015, with minor fluctuations. From 2016 onwards, there was a noticeable increase in employment, indicating that firms were scaling up operations. This may reflect not just recovery but also structural growth in the industries covered.
+
+Net Sales: The average net sales showed steady growth from 2010 to 2012, followed by fluctuations between 2013 and 2016. After 2016, net sales increased consistently and significantly, peaking in 2019. This trend suggests a post-crisis recovery and a likely expansion period in the EU corporate landscape during the late 2010s.
 
 4.Analyze Rank Stability Across Companies (2010–2019):
+
 ```{r}
 wide_data <- wide_data %>%
   mutate(rank = as.numeric(rank))
@@ -958,6 +970,7 @@ ggplot(top_stable, aes(x = reorder(company, sd_rank), y = sd_rank)) +
   ) +
   theme_minimal()
 ```
+
 As shown in the chart, Volkswagen stands out with the most stable position, consistently ranked first across the entire period (SD = 0). Other firms like Daimler, Siemens, and Robert Bosch also show strong rank stability, indicating sustained investment and leadership in R&D.
 
 On the other hand, companies such as Nokia, Evonik Industries, and L’Oréal demonstrate relatively higher rank variability, reflecting either fluctuations in R&D spending or changes in their relative position in the European innovation landscape.
@@ -987,15 +1000,205 @@ ggcorrplot(
   ggtheme = theme_minimal()
 )
 ```
-R&D and Net Sales:
-There is a moderate positive correlation between R&D expenditure (rd_million) and net sales (sales_million) at 0.58, suggesting that firms with higher R&D investment tend to achieve higher sales revenue.
-Similarly, R&D is positively correlated with the number of employees (employees, 0.61), indicating that R&D-intensive firms typically have larger workforces.
 
-Profit and Market Capitalization:
-The correlation between profit (profit_million) and market capitalization (market_cap_million) is 0.75, showing that more profitable firms generally have higher market value.
+R&D and Net Sales: There is a moderate positive correlation between R&D expenditure (rd_million) and net sales (sales_million) at 0.58, suggesting that firms with higher R&D investment tend to achieve higher sales revenue. Similarly, R&D is positively correlated with the number of employees (employees, 0.61), indicating that R&D-intensive firms typically have larger workforces.
 
-Capital Expenditure and Sales:
-Capital expenditure (capex_million) shows a strong positive correlation with net sales (sales_million) at 0.88, suggesting that firms with higher sales volumes are also more likely to make substantial capital investments.
+Profit and Market Capitalization: The correlation between profit (profit_million) and market capitalization (market_cap_million) is 0.75, showing that more profitable firms generally have higher market value.
 
-Negative Correlations with Rank:
-The variable rank (where a lower number indicates a better ranking) is negatively correlated with key performance indicators like R&D, sales, and employees. This aligns with expectations—top-ranked firms tend to have more resources, higher output, and greater investment in R&D.
+Capital Expenditure and Sales: Capital expenditure (capex_million) shows a strong positive correlation with net sales (sales_million) at 0.88, suggesting that firms with higher sales volumes are also more likely to make substantial capital investments.
+
+Negative Correlations with Rank: The variable rank (where a lower number indicates a better ranking) is negatively correlated with key performance indicators like R&D, sales, and employees. This aligns with expectations—top-ranked firms tend to have more resources, higher output, and greater investment in R&D.
+
+## Input datasets
+```{r}
+patents_data <- read.csv("patents count.csv")
+merged_data <- left_join(wide_data, patents_data, by = "company")
+merged_data_17_19 <- merged_data %>%
+  filter(year >= 2017 & year <= 2019)
+eis_data <- read_excel("EIS2024_web_download.xlsx", sheet = 1)
+eis_17_19 <- eis_data %>%
+  filter(year >= 2017 & year <= 2019)
+
+eis_wide_17_19 <- eis_17_19 %>%
+  select(country, year, indicator, value,`performance group`) %>%  
+  pivot_wider(names_from = indicator, values_from = value)
+eis_wide_17_19$country <- ifelse(
+  eis_wide_17_19$country == "United Kingdom", 
+  "UK", 
+  eis_wide_17_19$country
+)
+combined_data <- left_join(
+  merged_data_17_19,
+  eis_wide_17_19,
+  by = c("country", "year")
+)
+```
+Since the European Innovation Scoreboard (EIS) dataset provides innovation indicators primarily for the years 2017 to 2019, I limited the analysis to this period to ensure consistency and alignment with the main dataset, which includes company-level financial and patent information. Therefore, only observations from 2017 to 2019 were selected for the final analysis.
+
+
+## Missing value analysis
+```{r}
+missing_percent1 <- round(colMeans(is.na(combined_data)) * 100, 2)
+missing_percent1
+missing_percent2 <- round(colMeans(is.na(merged_data)) * 100, 2)
+missing_percent2
+```
+
+Due to the fact that the variable market_cap_growth_1y_percent (one-year market capitalization growth rate) has a high proportion of missing values (57.34%) and is a derived metric based on market_cap_million (market capitalization in million euros), it was excluded from further analysis. Including a variable with such a large amount of missing data could compromise the robustness of the analysis, and since the growth rate can be calculated from existing market cap values, retaining it was deemed unnecessary. Removing this variable helps simplify the dataset and maintain analytical clarity.
+
+```{r}
+merged_data <- merged_data |> 
+  select(-market_cap_growth_1y_percent,-market_cap_million)
+combined_data<- combined_data |> 
+  select(-market_cap_growth_1y_percent,-market_cap_million)
+```
+
+Given the presence of missing values across several key financial variables—such as capex_growth_1y_percent (23.12%), capex_million (19.59%), profit_million (11.22%), and profit_growth_1y_percent (12.11%)—I decided to perform imputation rather than removing the affected observations or variables. Since many of these indicators are important for the analysis, imputing missing values helps preserve the dataset’s completeness and analytical value. 
+
+To address the 19.59% missing rate in capex_million, imputation was applied in order to preserve analytical integrity and avoid unnecessary data loss:
+```{r}
+ggplot(merged_data, aes(log10(capex_million + 1))) +
+  geom_histogram(binwidth = 0.1, color = "skyblue3", fill = "skyblue") +
+  ggtitle("Log-transformed Capex Distribution") +
+  xlab("Log10(Capex + 1)") +
+  ylab("Count") +
+  theme_classic() +
+  theme(plot.title = element_text(size = 18))
+```
+Among several variables with missing values, capex_million (capital expenditure) was selected as a representative example for imputation comparison due to its relatively high missing rate (19.59%) and its importance as a financial indicator of corporate innovation investment. By focusing on this variable, I aim to evaluate and compare the effectiveness of different imputation strategies and their implications for subsequent data modeling and analysis.
+
+## Selection of imputation strategy
+```{r}
+value_imputation <- merged_data |>
+  mutate(
+    original = capex_million,
+    imputed_zero = if_else(is.na(capex_million), 0, capex_million),
+    imputed_mean = if_else(is.na(capex_million), mean(capex_million, na.rm = TRUE), capex_million),
+    imputed_median = if_else(is.na(capex_million), median(capex_million, na.rm = TRUE), capex_million)
+  )
+
+variables <- c("original", "imputed_zero", "imputed_mean", "imputed_median")
+titles <- c("Original Capex Distribution", "Zero Imputation", "Mean Imputation", "Median Imputation")
+colors <- c("skyblue3", "#15ad4f", "#6a6ad9", "#e65100")
+
+value_imputation_long <- value_imputation %>%
+  pivot_longer(all_of(variables), names_to = "method", values_to = "value")
+
+plots <- value_imputation_long %>%
+  mutate(title = factor(method, levels = variables, labels = titles)) %>%
+  ggplot(aes(x = log10(value + 1), fill = title)) +
+  geom_histogram(binwidth = 0.1, color = "#808080") +
+  facet_wrap(~title, scales = "free_y") +
+  scale_fill_manual(values = colors) +
+  labs(x = "Log10(Capex + 1)", y = "Count") +
+  theme_classic() +
+  theme(legend.position = "none", plot.title = element_text(size = 18))
+
+print(plots)
+
+```
+These imputation methods differ significantly from the original distribution of capex_million. Zero imputation artificially creates a large number of zero values, severely distorting the distribution. Mean and median imputations, while simple and commonly used, concentrate the imputed values at a single point, resulting in unnatural peaks and a loss of the original distribution shape. Therefore, these methods are not suitable for highly skewed financial data.
+
+Mice imputation:
+```{r}
+merged_numeric <- merged_data %>%
+  select(capex_million, rd_million, sales_million, employees, profit_million)
+
+mice_imputed <- data.frame(
+  original = merged_data$capex_million,
+  imputed_pmm = complete(mice(merged_numeric, m = 5, method = "pmm", seed = 123))$capex_million,
+  imputed_cart = complete(mice(merged_numeric, m = 5, method = "cart", seed = 123))$capex_million,
+  imputed_lasso = complete(mice(merged_numeric, m = 5, method = "lasso.norm", seed = 123))$capex_million
+)
+
+mice_imputed$imputed_rf <- complete(mice(merged_numeric, m = 5, method = "rf", seed = 123))$capex_million
+
+variables <- c("original", "imputed_pmm", "imputed_cart", "imputed_lasso", "imputed_rf")
+titles <- c(
+  "Original Capex Distribution",
+  "PMM-imputed Distribution",
+  "CART-imputed Distribution",
+  "Lasso-imputed Distribution",
+  "RF-imputed Distribution"
+)
+colors_fill <- c("skyblue", "#15ad4f", "#6a6ad9", "#e65100", "#ffc107")
+
+mice_imputed_long <- mice_imputed %>%
+  pivot_longer(all_of(variables), names_to = "method", values_to = "value")
+
+plots <- mice_imputed_long %>%
+  mutate(title = factor(method, levels = variables, labels = titles)) %>%
+  ggplot(aes(x = log10(value + 1), fill = title)) +
+  geom_histogram(binwidth = 0.1, color = "#808080", position = "identity") +
+  facet_wrap(~title, scales = "free_y") +
+  scale_fill_manual(values = colors_fill) +
+  labs(x = "Log10(Capex + 1)", y = "Count") +
+  theme_classic() +
+  theme(legend.position = "none", plot.title = element_text(size = 18))
+
+print(plots)
+
+```
+
+Miss Random Forest :
+```{r}
+missForest_result <- missForest(as.data.frame(merged_numeric), ntree = 15)
+
+missForest_imputed <- data.frame(
+  original = merged_numeric$capex_million,
+  imputed_missForest = missForest_result$ximp$capex_million
+)
+
+variables <- c("original", "imputed_missForest")
+titles <- c("Original Capex Distribution", "MissForest-imputed Distribution")
+colors_fill <- c("skyblue", "#FFD700")
+colors_border <- c("skyblue3", "#808080")
+
+missForest_imputed_long <- missForest_imputed %>%
+  pivot_longer(all_of(variables), names_to = "method", values_to = "value")
+
+plots <- missForest_imputed_long %>%
+  mutate(title = factor(method, levels = variables, labels = titles)) %>%
+  ggplot(aes(x = log10(value + 1), fill = title)) +
+  geom_histogram(binwidth = 0.1, color = "#808080", position = "identity") +
+  facet_wrap(~title, scales = "free_y") +
+  scale_fill_manual(values = colors_fill) +
+  theme_classic() +
+  theme(legend.position = "none")
+
+print(plots)
+```
+
+We applied and compared several imputation methods to handle the missing values in the capex_million variable, including Zero imputation, Mean imputation, Median imputation, Predictive Mean Matching (PMM), CART (Classification and Regression Trees), Lasso regression, Random Forest (RF), and MissForest.
+
+The simpler methods—Zero, Mean, and Median imputation—introduced noticeable distortion. Zero imputation artificially inflated the frequency of zero values, while mean and median imputation caused unrealistic peaks at single values, which misrepresents the true underlying distribution.
+
+Advanced methods such as PMM, CART, and Lasso performed better, but still introduced some smoothing or loss of variance compared to the original data. While these approaches attempt to model relationships between variables, they may not fully capture the complex, non-linear structure of financial data.
+
+Among all, Random Forest (RF) imputation stood out as the most effective. It maintained the skewness, variability, and distribution shape of the original capex_million variable most accurately. This is likely due to RF's ensemble learning approach, which can model interactions and non-linearities effectively without overfitting.
+
+Therefore, RF was selected as the most appropriate imputation method for this analysis, especially considering the financial nature and skewed distribution of the variable.
+
+## Data imputation
+```{r}
+vars_to_impute <- c(
+  "rd_growth_1y_percent", "rd_intensity_percent", "sales_million", 
+  "sales_growth_1y_percent", "employees", "employees_growth_1y_percent", 
+  "capex_million", "capex_growth_1y_percent", "capex_intensity_percent", 
+  "profit_million", "profit_growth_1y_percent", "profitability_percent"
+)
+
+merged_numeric <- merged_data %>% select(all_of(vars_to_impute))
+
+imputed_rf <- mice(merged_numeric, m = 5, method = "rf", seed = 123)
+
+imputed_data_rf <- complete(imputed_rf, 1)
+
+merged_data[vars_to_impute] <- imputed_data_rf
+
+```
+
+```{r}
+round(colMeans(is.na(merged_data)) * 100, 2)
+```
+After imputation, we confirmed that all target variables no longer contain missing values, ensuring the dataset is complete and ready for subsequent analysis.

@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Company data merged</title>
+<title>TFM data merged</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -79,7 +79,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Company data merged</h1>
+<h1 class="title">TFM data merged</h1>
 </div>
 
 
@@ -98,7 +98,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readxl)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr) </span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(purrr)</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stringr)</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(janitor)</span>
@@ -106,7 +106,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stringdist)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggcorrplot)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggcorrplot)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(mice)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(missForest)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <section id="data-input-and-data-cleaning-from-2003-to-2023" class="level2">
 <h2 class="anchored" data-anchor-id="data-input-and-data-cleaning-from-2003-to-2023">Data input and Data cleaning from 2003 to 2023</h2>
@@ -909,7 +912,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb29-47"><a href="#cb29-47" aria-hidden="true" tabindex="-1"></a>    icb_sector <span class="sc">==</span> <span class="st">"Aerospace &amp; Defence"</span> <span class="sc">~</span> <span class="st">"Aerospace &amp; Defense"</span>,</span>
 <span id="cb29-48"><a href="#cb29-48" aria-hidden="true" tabindex="-1"></a>    icb_sector <span class="sc">==</span> <span class="st">"Gas, Water &amp; Multiutilities"</span> <span class="sc">~</span> <span class="st">"Gas, Water &amp; Multi-Utilities"</span>,</span>
 <span id="cb29-49"><a href="#cb29-49" aria-hidden="true" tabindex="-1"></a>    <span class="cn">TRUE</span> <span class="sc">~</span> icb_sector</span>
-<span id="cb29-50"><a href="#cb29-50" aria-hidden="true" tabindex="-1"></a>  ))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb29-50"><a href="#cb29-50" aria-hidden="true" tabindex="-1"></a>  ))</span>
+<span id="cb29-51"><a href="#cb29-51" aria-hidden="true" tabindex="-1"></a>wide_data<span class="sc">$</span>country <span class="ot">&lt;-</span> <span class="fu">as.character</span>(wide_data<span class="sc">$</span>country)  </span>
+<span id="cb29-52"><a href="#cb29-52" aria-hidden="true" tabindex="-1"></a>wide_data<span class="sc">$</span>country <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(wide_data<span class="sc">$</span>country <span class="sc">==</span> <span class="st">"The Netherlands"</span>, </span>
+<span id="cb29-53"><a href="#cb29-53" aria-hidden="true" tabindex="-1"></a>                            <span class="st">"Netherlands"</span>, </span>
+<span id="cb29-54"><a href="#cb29-54" aria-hidden="true" tabindex="-1"></a>                            wide_data<span class="sc">$</span>country)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>I constructed a balanced panel dataset for the period 2010–2019 by selecting companies that appeared in all ten years. I merged company-level data across years and reshaped key variables (e.g., R&amp;D, sales, employees) into long format. I removed redundant or irrelevant columns, set missing region values to “EU”, and reordered the variables to facilitate further analysis.</p>
 </section>
@@ -1095,6 +1102,538 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Profit and Market Capitalization: The correlation between profit (profit_million) and market capitalization (market_cap_million) is 0.75, showing that more profitable firms generally have higher market value.</p>
 <p>Capital Expenditure and Sales: Capital expenditure (capex_million) shows a strong positive correlation with net sales (sales_million) at 0.88, suggesting that firms with higher sales volumes are also more likely to make substantial capital investments.</p>
 <p>Negative Correlations with Rank: The variable rank (where a lower number indicates a better ranking) is negatively correlated with key performance indicators like R&amp;D, sales, and employees. This aligns with expectations—top-ranked firms tend to have more resources, higher output, and greater investment in R&amp;D.</p>
+</section>
+<section id="input-datasets" class="level2">
+<h2 class="anchored" data-anchor-id="input-datasets">Input datasets</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>patents_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"patents count.csv"</span>)</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>merged_data <span class="ot">&lt;-</span> <span class="fu">left_join</span>(wide_data, patents_data, <span class="at">by =</span> <span class="st">"company"</span>)</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>merged_data_17_19 <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">&gt;=</span> <span class="dv">2017</span> <span class="sc">&amp;</span> year <span class="sc">&lt;=</span> <span class="dv">2019</span>)</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>eis_data <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="st">"EIS2024_web_download.xlsx"</span>, <span class="at">sheet =</span> <span class="dv">1</span>)</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>eis_17_19 <span class="ot">&lt;-</span> eis_data <span class="sc">%&gt;%</span></span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">&gt;=</span> <span class="dv">2017</span> <span class="sc">&amp;</span> year <span class="sc">&lt;=</span> <span class="dv">2019</span>)</span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a>eis_wide_17_19 <span class="ot">&lt;-</span> eis_17_19 <span class="sc">%&gt;%</span></span>
+<span id="cb38-10"><a href="#cb38-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(country, year, indicator, value,<span class="st">`</span><span class="at">performance group</span><span class="st">`</span>) <span class="sc">%&gt;%</span>  </span>
+<span id="cb38-11"><a href="#cb38-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> indicator, <span class="at">values_from =</span> value)</span>
+<span id="cb38-12"><a href="#cb38-12" aria-hidden="true" tabindex="-1"></a>eis_wide_17_19<span class="sc">$</span>country <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(</span>
+<span id="cb38-13"><a href="#cb38-13" aria-hidden="true" tabindex="-1"></a>  eis_wide_17_19<span class="sc">$</span>country <span class="sc">==</span> <span class="st">"United Kingdom"</span>, </span>
+<span id="cb38-14"><a href="#cb38-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">"UK"</span>, </span>
+<span id="cb38-15"><a href="#cb38-15" aria-hidden="true" tabindex="-1"></a>  eis_wide_17_19<span class="sc">$</span>country</span>
+<span id="cb38-16"><a href="#cb38-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb38-17"><a href="#cb38-17" aria-hidden="true" tabindex="-1"></a>combined_data <span class="ot">&lt;-</span> <span class="fu">left_join</span>(</span>
+<span id="cb38-18"><a href="#cb38-18" aria-hidden="true" tabindex="-1"></a>  merged_data_17_19,</span>
+<span id="cb38-19"><a href="#cb38-19" aria-hidden="true" tabindex="-1"></a>  eis_wide_17_19,</span>
+<span id="cb38-20"><a href="#cb38-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"country"</span>, <span class="st">"year"</span>)</span>
+<span id="cb38-21"><a href="#cb38-21" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Since the European Innovation Scoreboard (EIS) dataset provides innovation indicators primarily for the years 2017 to 2019, I limited the analysis to this period to ensure consistency and alignment with the main dataset, which includes company-level financial and patent information. Therefore, only observations from 2017 to 2019 were selected for the final analysis.</p>
+</section>
+<section id="missing-value-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="missing-value-analysis">Missing value analysis</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>missing_percent1 <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">colMeans</span>(<span class="fu">is.na</span>(combined_data)) <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">2</span>)</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>missing_percent1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                                                    company 
+                                                       0.00 
+                                                       year 
+                                                       0.00 
+                                                     region 
+                                                       0.00 
+                                                    country 
+                                                       0.00 
+                                                 icb_sector 
+                                                       0.00 
+                                                       rank 
+                                                       0.00 
+                                                 rd_million 
+                                                       0.00 
+                                       rd_growth_1y_percent 
+                                                       0.16 
+                                       rd_intensity_percent 
+                                                       1.04 
+                                              sales_million 
+                                                       1.04 
+                                    sales_growth_1y_percent 
+                                                       1.28 
+                                                  employees 
+                                                       1.04 
+                                employees_growth_1y_percent 
+                                                       1.28 
+                                              capex_million 
+                                                       2.40 
+                                    capex_growth_1y_percent 
+                                                       2.80 
+                                    capex_intensity_percent 
+                                                       3.04 
+                                             profit_million 
+                                                       2.16 
+                                   profit_growth_1y_percent 
+                                                       2.40 
+                                      profitability_percent 
+                                                       2.32 
+                                         market_cap_million 
+                                                      13.91 
+                               market_cap_growth_1y_percent 
+                                                      14.31 
+                                          patents_2010_2019 
+                                                       0.00 
+                                          performance group 
+                                                       0.24 
+                                   Summary Innovation Index 
+                                                       0.24 
+                                    New doctorate graduates 
+                                                       0.24 
+                         Population with tertiary education 
+                                                       0.24 
+                   Population involved in lifelong learning 
+                                                       0.24 
+                   International scientific co-publications 
+                                                       0.24 
+       Scientific publications among the top 10% most cited 
+                                                       0.24 
+Foreign doctorate students as a % of all doctorate students 
+                                                       0.24 
+        Individuals with above basic overall digital skills 
+                                                      18.47 
+                       R&amp;D expenditure in the public sector 
+                                                       0.24 
+                               Venture capital expenditures 
+                                                       0.24 
+     Direct and indirect government support of business R&amp;D 
+                                                       0.24 
+                     R&amp;D expenditure in the business sector 
+                                                       0.24 
+                                   Employed ICT specialists 
+                                                       0.24 
+                       SMEs introducing product innovations 
+                                                       0.24 
+              SMEs introducing business process innovations 
+                                                       0.24 
+                  Innovative SMEs collaborating with others 
+                                                       0.24 
+                             Public-private co-publications 
+                                                       0.24 
+                                Job-to-job mobility of HRST 
+                                                       2.24 
+                                    PCT patent applications 
+                                                       0.24 
+                                     Trademark applications 
+                                                       0.24 
+                                        Design applications 
+                                                       0.24 
+               Employment in knowledge-intensive activities 
+                                                       0.24 
+                       Employment in innovative enterprises 
+                                                       0.24 
+             Exports of medium and high technology products 
+                                                       0.24 
+                       Knowledge-intensive services exports 
+                                                       0.24 
+         Sales of new-to-market and new-to-firm innovations 
+                                                       0.24 
+                                      Resource productivity 
+                                                       0.24 
+                         Air emissions by fine particulates 
+                                                       0.24 
+                           Environment-related technologies 
+                                                       0.24 
+                                      Broadband penetration 
+                                                       0.24 
+                            Non-R&amp;D innovation expenditures 
+                                                       0.24 
+                Innovation expenditures per person employed 
+                                                       0.24 
+                         Enterprises providing ICT training 
+                                                       0.24 
+                                            Human resources 
+                                                       0.24 
+                                Attractive research systems 
+                                                       0.24 
+                                             Digitalisation 
+                                                       0.24 
+                                           Firm investments 
+                                                       0.24 
+                            Use of information technologies 
+                                                       0.24 
+                                                 Innovators 
+                                                       0.24 
+                                                   Linkages 
+                                                       0.24 
+                                        Intellectual assets 
+                                                       0.24 
+                                         Employment impacts 
+                                                       0.24 
+                                              Sales impacts 
+                                                       0.24 
+                               Environmental sustainability 
+                                                       0.24 
+                                        Finance and support 
+                                                       0.24 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>missing_percent2 <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">colMeans</span>(<span class="fu">is.na</span>(merged_data)) <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">2</span>)</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>missing_percent2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                     company                         year 
+                        0.00                         0.00 
+                      region                      country 
+                        0.00                         0.00 
+                  icb_sector                         rank 
+                        0.00                         0.00 
+                  rd_million         rd_growth_1y_percent 
+                        0.00                         0.10 
+        rd_intensity_percent                sales_million 
+                        1.70                         0.84 
+     sales_growth_1y_percent                    employees 
+                        1.68                         1.68 
+ employees_growth_1y_percent                capex_million 
+                        2.59                        19.59 
+     capex_growth_1y_percent      capex_intensity_percent 
+                       23.12                         5.30 
+              profit_million     profit_growth_1y_percent 
+                       11.22                        12.11 
+       profitability_percent           market_cap_million 
+                        2.23                        56.81 
+market_cap_growth_1y_percent            patents_2010_2019 
+                       57.34                         0.00 </code></pre>
+</div>
+</div>
+<p>Due to the fact that the variable market_cap_growth_1y_percent (one-year market capitalization growth rate) has a high proportion of missing values (57.34%) and is a derived metric based on market_cap_million (market capitalization in million euros), it was excluded from further analysis. Including a variable with such a large amount of missing data could compromise the robustness of the analysis, and since the growth rate can be calculated from existing market cap values, retaining it was deemed unnecessary. Removing this variable helps simplify the dataset and maintain analytical clarity.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>merged_data <span class="ot">&lt;-</span> merged_data <span class="sc">|&gt;</span> </span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>market_cap_growth_1y_percent,<span class="sc">-</span>market_cap_million)</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>combined_data<span class="ot">&lt;-</span> combined_data <span class="sc">|&gt;</span> </span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>market_cap_growth_1y_percent,<span class="sc">-</span>market_cap_million)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Given the presence of missing values across several key financial variables—such as capex_growth_1y_percent (23.12%), capex_million (19.59%), profit_million (11.22%), and profit_growth_1y_percent (12.11%)—I decided to perform imputation rather than removing the affected observations or variables. Since many of these indicators are important for the analysis, imputing missing values helps preserve the dataset’s completeness and analytical value.</p>
+<p>To address the 19.59% missing rate in capex_million, imputation was applied in order to preserve analytical integrity and avoid unnecessary data loss:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(merged_data, <span class="fu">aes</span>(<span class="fu">log10</span>(capex_million <span class="sc">+</span> <span class="dv">1</span>))) <span class="sc">+</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"skyblue3"</span>, <span class="at">fill =</span> <span class="st">"skyblue"</span>) <span class="sc">+</span></span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Log-transformed Capex Distribution"</span>) <span class="sc">+</span></span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">"Log10(Capex + 1)"</span>) <span class="sc">+</span></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">"Count"</span>) <span class="sc">+</span></span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>() <span class="sc">+</span></span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">18</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="merged_data_EU_files/figure-html/unnamed-chunk-37-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Among several variables with missing values, capex_million (capital expenditure) was selected as a representative example for imputation comparison due to its relatively high missing rate (19.59%) and its importance as a financial indicator of corporate innovation investment. By focusing on this variable, I aim to evaluate and compare the effectiveness of different imputation strategies and their implications for subsequent data modeling and analysis.</p>
+</section>
+<section id="selection-of-imputation-strategy" class="level2">
+<h2 class="anchored" data-anchor-id="selection-of-imputation-strategy">Selection of imputation strategy</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>value_imputation <span class="ot">&lt;-</span> merged_data <span class="sc">|&gt;</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">original =</span> capex_million,</span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">imputed_zero =</span> <span class="fu">if_else</span>(<span class="fu">is.na</span>(capex_million), <span class="dv">0</span>, capex_million),</span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">imputed_mean =</span> <span class="fu">if_else</span>(<span class="fu">is.na</span>(capex_million), <span class="fu">mean</span>(capex_million, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), capex_million),</span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">imputed_median =</span> <span class="fu">if_else</span>(<span class="fu">is.na</span>(capex_million), <span class="fu">median</span>(capex_million, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), capex_million)</span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>variables <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"original"</span>, <span class="st">"imputed_zero"</span>, <span class="st">"imputed_mean"</span>, <span class="st">"imputed_median"</span>)</span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>titles <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Original Capex Distribution"</span>, <span class="st">"Zero Imputation"</span>, <span class="st">"Mean Imputation"</span>, <span class="st">"Median Imputation"</span>)</span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"skyblue3"</span>, <span class="st">"#15ad4f"</span>, <span class="st">"#6a6ad9"</span>, <span class="st">"#e65100"</span>)</span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>value_imputation_long <span class="ot">&lt;-</span> value_imputation <span class="sc">%&gt;%</span></span>
+<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="fu">all_of</span>(variables), <span class="at">names_to =</span> <span class="st">"method"</span>, <span class="at">values_to =</span> <span class="st">"value"</span>)</span>
+<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a>plots <span class="ot">&lt;-</span> value_imputation_long <span class="sc">%&gt;%</span></span>
+<span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">title =</span> <span class="fu">factor</span>(method, <span class="at">levels =</span> variables, <span class="at">labels =</span> titles)) <span class="sc">%&gt;%</span></span>
+<span id="cb45-18"><a href="#cb45-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">log10</span>(value <span class="sc">+</span> <span class="dv">1</span>), <span class="at">fill =</span> title)) <span class="sc">+</span></span>
+<span id="cb45-19"><a href="#cb45-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"#808080"</span>) <span class="sc">+</span></span>
+<span id="cb45-20"><a href="#cb45-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>title, <span class="at">scales =</span> <span class="st">"free_y"</span>) <span class="sc">+</span></span>
+<span id="cb45-21"><a href="#cb45-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> colors) <span class="sc">+</span></span>
+<span id="cb45-22"><a href="#cb45-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Log10(Capex + 1)"</span>, <span class="at">y =</span> <span class="st">"Count"</span>) <span class="sc">+</span></span>
+<span id="cb45-23"><a href="#cb45-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>() <span class="sc">+</span></span>
+<span id="cb45-24"><a href="#cb45-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>, <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">18</span>))</span>
+<span id="cb45-25"><a href="#cb45-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-26"><a href="#cb45-26" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(plots)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="merged_data_EU_files/figure-html/unnamed-chunk-38-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>These imputation methods differ significantly from the original distribution of capex_million. Zero imputation artificially creates a large number of zero values, severely distorting the distribution. Mean and median imputations, while simple and commonly used, concentrate the imputed values at a single point, resulting in unnatural peaks and a loss of the original distribution shape. Therefore, these methods are not suitable for highly skewed financial data.</p>
+<p>Mice imputation:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>merged_numeric <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(capex_million, rd_million, sales_million, employees, profit_million)</span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>mice_imputed <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">original =</span> merged_data<span class="sc">$</span>capex_million,</span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">imputed_pmm =</span> <span class="fu">complete</span>(<span class="fu">mice</span>(merged_numeric, <span class="at">m =</span> <span class="dv">5</span>, <span class="at">method =</span> <span class="st">"pmm"</span>, <span class="at">seed =</span> <span class="dv">123</span>))<span class="sc">$</span>capex_million,</span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">imputed_cart =</span> <span class="fu">complete</span>(<span class="fu">mice</span>(merged_numeric, <span class="at">m =</span> <span class="dv">5</span>, <span class="at">method =</span> <span class="st">"cart"</span>, <span class="at">seed =</span> <span class="dv">123</span>))<span class="sc">$</span>capex_million,</span>
+<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">imputed_lasso =</span> <span class="fu">complete</span>(<span class="fu">mice</span>(merged_numeric, <span class="at">m =</span> <span class="dv">5</span>, <span class="at">method =</span> <span class="st">"lasso.norm"</span>, <span class="at">seed =</span> <span class="dv">123</span>))<span class="sc">$</span>capex_million</span>
+<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+ iter imp variable
+  1   1  capex_million  sales_million  employees  profit_million
+  1   2  capex_million  sales_million  employees  profit_million
+  1   3  capex_million  sales_million  employees  profit_million
+  1   4  capex_million  sales_million  employees  profit_million
+  1   5  capex_million  sales_million  employees  profit_million
+  2   1  capex_million  sales_million  employees  profit_million
+  2   2  capex_million  sales_million  employees  profit_million
+  2   3  capex_million  sales_million  employees  profit_million
+  2   4  capex_million  sales_million  employees  profit_million
+  2   5  capex_million  sales_million  employees  profit_million
+  3   1  capex_million  sales_million  employees  profit_million
+  3   2  capex_million  sales_million  employees  profit_million
+  3   3  capex_million  sales_million  employees  profit_million
+  3   4  capex_million  sales_million  employees  profit_million
+  3   5  capex_million  sales_million  employees  profit_million
+  4   1  capex_million  sales_million  employees  profit_million
+  4   2  capex_million  sales_million  employees  profit_million
+  4   3  capex_million  sales_million  employees  profit_million
+  4   4  capex_million  sales_million  employees  profit_million
+  4   5  capex_million  sales_million  employees  profit_million
+  5   1  capex_million  sales_million  employees  profit_million
+  5   2  capex_million  sales_million  employees  profit_million
+  5   3  capex_million  sales_million  employees  profit_million
+  5   4  capex_million  sales_million  employees  profit_million
+  5   5  capex_million  sales_million  employees  profit_million
+
+ iter imp variable
+  1   1  capex_million  sales_million  employees  profit_million
+  1   2  capex_million  sales_million  employees  profit_million
+  1   3  capex_million  sales_million  employees  profit_million
+  1   4  capex_million  sales_million  employees  profit_million
+  1   5  capex_million  sales_million  employees  profit_million
+  2   1  capex_million  sales_million  employees  profit_million
+  2   2  capex_million  sales_million  employees  profit_million
+  2   3  capex_million  sales_million  employees  profit_million
+  2   4  capex_million  sales_million  employees  profit_million
+  2   5  capex_million  sales_million  employees  profit_million
+  3   1  capex_million  sales_million  employees  profit_million
+  3   2  capex_million  sales_million  employees  profit_million
+  3   3  capex_million  sales_million  employees  profit_million
+  3   4  capex_million  sales_million  employees  profit_million
+  3   5  capex_million  sales_million  employees  profit_million
+  4   1  capex_million  sales_million  employees  profit_million
+  4   2  capex_million  sales_million  employees  profit_million
+  4   3  capex_million  sales_million  employees  profit_million
+  4   4  capex_million  sales_million  employees  profit_million
+  4   5  capex_million  sales_million  employees  profit_million
+  5   1  capex_million  sales_million  employees  profit_million
+  5   2  capex_million  sales_million  employees  profit_million
+  5   3  capex_million  sales_million  employees  profit_million
+  5   4  capex_million  sales_million  employees  profit_million
+  5   5  capex_million  sales_million  employees  profit_million
+
+ iter imp variable
+  1   1  capex_million  sales_million  employees  profit_million
+  1   2  capex_million  sales_million  employees  profit_million
+  1   3  capex_million  sales_million  employees  profit_million
+  1   4  capex_million  sales_million  employees  profit_million
+  1   5  capex_million  sales_million  employees  profit_million
+  2   1  capex_million  sales_million  employees  profit_million
+  2   2  capex_million  sales_million  employees  profit_million
+  2   3  capex_million  sales_million  employees  profit_million
+  2   4  capex_million  sales_million  employees  profit_million
+  2   5  capex_million  sales_million  employees  profit_million
+  3   1  capex_million  sales_million  employees  profit_million
+  3   2  capex_million  sales_million  employees  profit_million
+  3   3  capex_million  sales_million  employees  profit_million
+  3   4  capex_million  sales_million  employees  profit_million
+  3   5  capex_million  sales_million  employees  profit_million
+  4   1  capex_million  sales_million  employees  profit_million
+  4   2  capex_million  sales_million  employees  profit_million
+  4   3  capex_million  sales_million  employees  profit_million
+  4   4  capex_million  sales_million  employees  profit_million
+  4   5  capex_million  sales_million  employees  profit_million
+  5   1  capex_million  sales_million  employees  profit_million
+  5   2  capex_million  sales_million  employees  profit_million
+  5   3  capex_million  sales_million  employees  profit_million
+  5   4  capex_million  sales_million  employees  profit_million
+  5   5  capex_million  sales_million  employees  profit_million</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>mice_imputed<span class="sc">$</span>imputed_rf <span class="ot">&lt;-</span> <span class="fu">complete</span>(<span class="fu">mice</span>(merged_numeric, <span class="at">m =</span> <span class="dv">5</span>, <span class="at">method =</span> <span class="st">"rf"</span>, <span class="at">seed =</span> <span class="dv">123</span>))<span class="sc">$</span>capex_million</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+ iter imp variable
+  1   1  capex_million  sales_million  employees  profit_million
+  1   2  capex_million  sales_million  employees  profit_million
+  1   3  capex_million  sales_million  employees  profit_million
+  1   4  capex_million  sales_million  employees  profit_million
+  1   5  capex_million  sales_million  employees  profit_million
+  2   1  capex_million  sales_million  employees  profit_million
+  2   2  capex_million  sales_million  employees  profit_million
+  2   3  capex_million  sales_million  employees  profit_million
+  2   4  capex_million  sales_million  employees  profit_million
+  2   5  capex_million  sales_million  employees  profit_million
+  3   1  capex_million  sales_million  employees  profit_million
+  3   2  capex_million  sales_million  employees  profit_million
+  3   3  capex_million  sales_million  employees  profit_million
+  3   4  capex_million  sales_million  employees  profit_million
+  3   5  capex_million  sales_million  employees  profit_million
+  4   1  capex_million  sales_million  employees  profit_million
+  4   2  capex_million  sales_million  employees  profit_million
+  4   3  capex_million  sales_million  employees  profit_million
+  4   4  capex_million  sales_million  employees  profit_million
+  4   5  capex_million  sales_million  employees  profit_million
+  5   1  capex_million  sales_million  employees  profit_million
+  5   2  capex_million  sales_million  employees  profit_million
+  5   3  capex_million  sales_million  employees  profit_million
+  5   4  capex_million  sales_million  employees  profit_million
+  5   5  capex_million  sales_million  employees  profit_million</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>variables <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"original"</span>, <span class="st">"imputed_pmm"</span>, <span class="st">"imputed_cart"</span>, <span class="st">"imputed_lasso"</span>, <span class="st">"imputed_rf"</span>)</span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>titles <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Original Capex Distribution"</span>,</span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"PMM-imputed Distribution"</span>,</span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"CART-imputed Distribution"</span>,</span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Lasso-imputed Distribution"</span>,</span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"RF-imputed Distribution"</span></span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a>colors_fill <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"skyblue"</span>, <span class="st">"#15ad4f"</span>, <span class="st">"#6a6ad9"</span>, <span class="st">"#e65100"</span>, <span class="st">"#ffc107"</span>)</span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a>mice_imputed_long <span class="ot">&lt;-</span> mice_imputed <span class="sc">%&gt;%</span></span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="fu">all_of</span>(variables), <span class="at">names_to =</span> <span class="st">"method"</span>, <span class="at">values_to =</span> <span class="st">"value"</span>)</span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a>plots <span class="ot">&lt;-</span> mice_imputed_long <span class="sc">%&gt;%</span></span>
+<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">title =</span> <span class="fu">factor</span>(method, <span class="at">levels =</span> variables, <span class="at">labels =</span> titles)) <span class="sc">%&gt;%</span></span>
+<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">log10</span>(value <span class="sc">+</span> <span class="dv">1</span>), <span class="at">fill =</span> title)) <span class="sc">+</span></span>
+<span id="cb50-17"><a href="#cb50-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"#808080"</span>, <span class="at">position =</span> <span class="st">"identity"</span>) <span class="sc">+</span></span>
+<span id="cb50-18"><a href="#cb50-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>title, <span class="at">scales =</span> <span class="st">"free_y"</span>) <span class="sc">+</span></span>
+<span id="cb50-19"><a href="#cb50-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> colors_fill) <span class="sc">+</span></span>
+<span id="cb50-20"><a href="#cb50-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Log10(Capex + 1)"</span>, <span class="at">y =</span> <span class="st">"Count"</span>) <span class="sc">+</span></span>
+<span id="cb50-21"><a href="#cb50-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>() <span class="sc">+</span></span>
+<span id="cb50-22"><a href="#cb50-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>, <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">18</span>))</span>
+<span id="cb50-23"><a href="#cb50-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-24"><a href="#cb50-24" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(plots)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="merged_data_EU_files/figure-html/unnamed-chunk-39-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Miss Random Forest :</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>missForest_result <span class="ot">&lt;-</span> <span class="fu">missForest</span>(<span class="fu">as.data.frame</span>(merged_numeric), <span class="at">ntree =</span> <span class="dv">15</span>)</span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>missForest_imputed <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">original =</span> merged_numeric<span class="sc">$</span>capex_million,</span>
+<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">imputed_missForest =</span> missForest_result<span class="sc">$</span>ximp<span class="sc">$</span>capex_million</span>
+<span id="cb51-6"><a href="#cb51-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb51-7"><a href="#cb51-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-8"><a href="#cb51-8" aria-hidden="true" tabindex="-1"></a>variables <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"original"</span>, <span class="st">"imputed_missForest"</span>)</span>
+<span id="cb51-9"><a href="#cb51-9" aria-hidden="true" tabindex="-1"></a>titles <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Original Capex Distribution"</span>, <span class="st">"MissForest-imputed Distribution"</span>)</span>
+<span id="cb51-10"><a href="#cb51-10" aria-hidden="true" tabindex="-1"></a>colors_fill <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"skyblue"</span>, <span class="st">"#FFD700"</span>)</span>
+<span id="cb51-11"><a href="#cb51-11" aria-hidden="true" tabindex="-1"></a>colors_border <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"skyblue3"</span>, <span class="st">"#808080"</span>)</span>
+<span id="cb51-12"><a href="#cb51-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-13"><a href="#cb51-13" aria-hidden="true" tabindex="-1"></a>missForest_imputed_long <span class="ot">&lt;-</span> missForest_imputed <span class="sc">%&gt;%</span></span>
+<span id="cb51-14"><a href="#cb51-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="fu">all_of</span>(variables), <span class="at">names_to =</span> <span class="st">"method"</span>, <span class="at">values_to =</span> <span class="st">"value"</span>)</span>
+<span id="cb51-15"><a href="#cb51-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-16"><a href="#cb51-16" aria-hidden="true" tabindex="-1"></a>plots <span class="ot">&lt;-</span> missForest_imputed_long <span class="sc">%&gt;%</span></span>
+<span id="cb51-17"><a href="#cb51-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">title =</span> <span class="fu">factor</span>(method, <span class="at">levels =</span> variables, <span class="at">labels =</span> titles)) <span class="sc">%&gt;%</span></span>
+<span id="cb51-18"><a href="#cb51-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">log10</span>(value <span class="sc">+</span> <span class="dv">1</span>), <span class="at">fill =</span> title)) <span class="sc">+</span></span>
+<span id="cb51-19"><a href="#cb51-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.1</span>, <span class="at">color =</span> <span class="st">"#808080"</span>, <span class="at">position =</span> <span class="st">"identity"</span>) <span class="sc">+</span></span>
+<span id="cb51-20"><a href="#cb51-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>title, <span class="at">scales =</span> <span class="st">"free_y"</span>) <span class="sc">+</span></span>
+<span id="cb51-21"><a href="#cb51-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> colors_fill) <span class="sc">+</span></span>
+<span id="cb51-22"><a href="#cb51-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>() <span class="sc">+</span></span>
+<span id="cb51-23"><a href="#cb51-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>)</span>
+<span id="cb51-24"><a href="#cb51-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-25"><a href="#cb51-25" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(plots)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="merged_data_EU_files/figure-html/unnamed-chunk-40-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We applied and compared several imputation methods to handle the missing values in the capex_million variable, including Zero imputation, Mean imputation, Median imputation, Predictive Mean Matching (PMM), CART (Classification and Regression Trees), Lasso regression, Random Forest (RF), and MissForest.</p>
+<p>The simpler methods—Zero, Mean, and Median imputation—introduced noticeable distortion. Zero imputation artificially inflated the frequency of zero values, while mean and median imputation caused unrealistic peaks at single values, which misrepresents the true underlying distribution.</p>
+<p>Advanced methods such as PMM, CART, and Lasso performed better, but still introduced some smoothing or loss of variance compared to the original data. While these approaches attempt to model relationships between variables, they may not fully capture the complex, non-linear structure of financial data.</p>
+<p>Among all, Random Forest (RF) imputation stood out as the most effective. It maintained the skewness, variability, and distribution shape of the original capex_million variable most accurately. This is likely due to RF’s ensemble learning approach, which can model interactions and non-linearities effectively without overfitting.</p>
+<p>Therefore, RF was selected as the most appropriate imputation method for this analysis, especially considering the financial nature and skewed distribution of the variable.</p>
+</section>
+<section id="data-imputation" class="level2">
+<h2 class="anchored" data-anchor-id="data-imputation">Data imputation</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>vars_to_impute <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">"rd_growth_1y_percent"</span>, <span class="st">"rd_intensity_percent"</span>, <span class="st">"sales_million"</span>, </span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"sales_growth_1y_percent"</span>, <span class="st">"employees"</span>, <span class="st">"employees_growth_1y_percent"</span>, </span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"capex_million"</span>, <span class="st">"capex_growth_1y_percent"</span>, <span class="st">"capex_intensity_percent"</span>, </span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"profit_million"</span>, <span class="st">"profit_growth_1y_percent"</span>, <span class="st">"profitability_percent"</span></span>
+<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb52-7"><a href="#cb52-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-8"><a href="#cb52-8" aria-hidden="true" tabindex="-1"></a>merged_numeric <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="fu">all_of</span>(vars_to_impute))</span>
+<span id="cb52-9"><a href="#cb52-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-10"><a href="#cb52-10" aria-hidden="true" tabindex="-1"></a>imputed_rf <span class="ot">&lt;-</span> <span class="fu">mice</span>(merged_numeric, <span class="at">m =</span> <span class="dv">5</span>, <span class="at">method =</span> <span class="st">"rf"</span>, <span class="at">seed =</span> <span class="dv">123</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+ iter imp variable
+  1   1  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  1   2  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  1   3  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  1   4  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  1   5  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  2   1  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  2   2  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  2   3  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  2   4  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  2   5  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  3   1  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  3   2  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  3   3  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  3   4  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  3   5  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  4   1  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  4   2  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  4   3  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  4   4  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  4   5  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  5   1  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  5   2  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  5   3  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  5   4  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent
+  5   5  rd_growth_1y_percent  rd_intensity_percent  sales_million  sales_growth_1y_percent  employees  employees_growth_1y_percent  capex_million  capex_growth_1y_percent  capex_intensity_percent  profit_million  profit_growth_1y_percent  profitability_percent</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>imputed_data_rf <span class="ot">&lt;-</span> <span class="fu">complete</span>(imputed_rf, <span class="dv">1</span>)</span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>merged_data[vars_to_impute] <span class="ot">&lt;-</span> imputed_data_rf</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">colMeans</span>(<span class="fu">is.na</span>(merged_data)) <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                    company                        year 
+                          0                           0 
+                     region                     country 
+                          0                           0 
+                 icb_sector                        rank 
+                          0                           0 
+                 rd_million        rd_growth_1y_percent 
+                          0                           0 
+       rd_intensity_percent               sales_million 
+                          0                           0 
+    sales_growth_1y_percent                   employees 
+                          0                           0 
+employees_growth_1y_percent               capex_million 
+                          0                           0 
+    capex_growth_1y_percent     capex_intensity_percent 
+                          0                           0 
+             profit_million    profit_growth_1y_percent 
+                          0                           0 
+      profitability_percent           patents_2010_2019 
+                          0                           0 </code></pre>
+</div>
+</div>
+<p>After imputation, we confirmed that all target variables no longer contain missing values, ensuring the dataset is complete and ready for subsequent analysis.</p>
 </section>
 
 </main>

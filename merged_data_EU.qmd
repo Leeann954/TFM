@@ -30,6 +30,12 @@ library(ggcorrplot)
 library(ggplot2)
 library(mice)
 library(missForest)
+library(plm)  
+library(fastDummies)
+library(fixest)
+library(stringmagic)
+library(plm)
+library(lpirfs)
 ```
 
 ## Data input and Data cleaning from 2003 to 2023
@@ -889,6 +895,25 @@ The bar chart shows the number of companies per country that consistently appear
 2.Number of companies by industry (ICB sector)
 
 ```{r}
+wide_data$icb_sector <- dplyr::recode(wide_data$icb_sector,
+  "Telecommunications Equipment" = "Technology Hardware & Equipment",
+  "Computer Hardware"              = "Technology Hardware & Equipment",
+  "Semiconductors"                 = "Technology Hardware & Equipment",
+
+  "Electrical Components & Equipment" = "Electronic & Electrical Equipment",
+  "Electronic Equipment"              = "Electronic & Electrical Equipment",
+
+  "Pharmaceuticals" = "Pharmaceuticals & Biotechnology",
+  "Biotechnology"   = "Pharmaceuticals & Biotechnology",
+
+  "Commercial Vehicles & Trucks" = "Industrial Engineering",
+  "Industrial Machinery"         = "Industrial Engineering",
+
+  "Software"         = "Software & Computer Services",
+  "Computer Services" = "Software & Computer Services",
+  "Other Financials" = "Financial Services"
+)
+
 
 company_count_industry <- wide_data %>%
   group_by(icb_sector) %>%
@@ -1012,44 +1037,28 @@ Negative Correlations with Rank: The variable rank (where a lower number indicat
 ## Input datasets
 ```{r}
 patents_data <- read.csv("patents count.csv")
-merged_data <- left_join(wide_data, patents_data, by = "company")
-merged_data_17_19 <- merged_data %>%
-  filter(year >= 2017 & year <= 2019)
-eis_data <- read_excel("EIS2024_web_download.xlsx", sheet = 1)
-eis_17_19 <- eis_data %>%
-  filter(year >= 2017 & year <= 2019)
+long_patents_data <- patents_data %>%
+  pivot_longer(
+    cols = starts_with("X"),
+    names_to = "year",
+    names_prefix = "X",
+    values_to = "patent_count"
+  ) %>%
+  mutate(year = as.integer(year))  
+merged_data <- left_join(wide_data, long_patents_data, by = c("company", "year"))
 
-eis_wide_17_19 <- eis_17_19 %>%
-  select(country, year, indicator, value,`performance group`) %>%  
-  pivot_wider(names_from = indicator, values_from = value)
-eis_wide_17_19$country <- ifelse(
-  eis_wide_17_19$country == "United Kingdom", 
-  "UK", 
-  eis_wide_17_19$country
-)
-combined_data <- left_join(
-  merged_data_17_19,
-  eis_wide_17_19,
-  by = c("country", "year")
-)
 ```
-Since the European Innovation Scoreboard (EIS) dataset provides innovation indicators primarily for the years 2017 to 2019, I limited the analysis to this period to ensure consistency and alignment with the main dataset, which includes company-level financial and patent information. Therefore, only observations from 2017 to 2019 were selected for the final analysis.
-
 
 ## Missing value analysis
 ```{r}
-missing_percent1 <- round(colMeans(is.na(combined_data)) * 100, 2)
-missing_percent1
-missing_percent2 <- round(colMeans(is.na(merged_data)) * 100, 2)
-missing_percent2
+missing_percent <- round(colMeans(is.na(merged_data)) * 100, 2)
+missing_percent
 ```
 
 Due to the fact that the variable market_cap_growth_1y_percent (one-year market capitalization growth rate) has a high proportion of missing values (57.34%) and is a derived metric based on market_cap_million (market capitalization in million euros), it was excluded from further analysis. Including a variable with such a large amount of missing data could compromise the robustness of the analysis, and since the growth rate can be calculated from existing market cap values, retaining it was deemed unnecessary. Removing this variable helps simplify the dataset and maintain analytical clarity.
 
 ```{r}
 merged_data <- merged_data |> 
-  select(-market_cap_growth_1y_percent,-market_cap_million)
-combined_data<- combined_data |> 
   select(-market_cap_growth_1y_percent,-market_cap_million)
 ```
 
@@ -1202,3 +1211,246 @@ merged_data[vars_to_impute] <- imputed_data_rf
 round(colMeans(is.na(merged_data)) * 100, 2)
 ```
 After imputation, we confirmed that all target variables no longer contain missing values, ensuring the dataset is complete and ready for subsequent analysis.
+
+## Cross sectional analysis
+
+### 1.by industry
+
+H₀: Top20% ≤ Others
+H₁: Top20% > Others
+```{r}
+data_2019 <- merged_data %>% filter(year == 2019)
+data_2019 <- data_2019 %>%
+  mutate(log_rd = log1p(rd_intensity_percent))
+industry_avg_log <- data_2019 %>%
+  group_by(icb_sector) %>%
+  summarise(mean_log_rd = mean(log_rd, na.rm = TRUE))
+
+threshold <- quantile(industry_avg_log$mean_log_rd, 0.80, na.rm = TRUE)
+
+top20_industries <- industry_avg_log %>%
+  filter(mean_log_rd >= threshold) %>%
+  pull(icb_sector)
+data_2019 <- data_2019 %>%
+  mutate(industry_group = ifelse(icb_sector %in% top20_industries, "Top20%", "Others"))
+data_2019$industry_group <- factor(data_2019$industry_group, levels = c("Top20%", "Others"))
+
+t.test(patent_count ~ industry_group, data = data_2019, alternative = "greater")
+
+ggplot(data_2019, aes(x = industry_group, y = patent_count)) +
+  geom_boxplot() +
+  labs(title = "Patens：Top20% industry vs others", y = "Patent Count", x = "") +
+  theme_minimal()
+
+wilcox.test(sales_growth_1y_percent ~ industry_group, data = data_2019, alternative = "greater")
+
+ggplot(data_2019, aes(x = industry_group, y = sales_growth_1y_percent)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.3, color = "steelblue") +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red") +
+  coord_cartesian(ylim = c(-100, 300)) +  
+  labs(title = "Sales Growth : Top20% vs Others",
+       y = "1-Year Sales Growth (%)", x = "") +
+  theme_minimal()
+
+```
+
+Based on 2019 data, firms in the top 20% R&D-intensive industries demonstrate significantly higher innovation output and stronger growth performance compared to others. A Welch two-sample t-test shows that their average patent count is significantly greater (p = 0.0161), and a Wilcoxon rank-sum test confirms that their sales growth is also significantly higher (p = 0.0009). These results support the hypothesis that operating in more R&D-intensive industries is associated with both increased innovation and better firm-level growth outcomes.
+
+### 2.by country
+
+H₀: Top20% ≤ Others
+H₁: Top20% > Others
+```{r}
+country_avg_log <- data_2019 %>%
+  group_by(country) %>%
+  summarise(mean_log_rd = mean(log_rd, na.rm = TRUE))
+
+threshold <- quantile(country_avg_log$mean_log_rd, 0.80, na.rm = TRUE)
+
+top20_countries <- country_avg_log %>%
+  filter(mean_log_rd >= threshold) %>%
+  pull(country)
+
+data_2019 <- data_2019 %>%
+  mutate(country_group = ifelse(country %in% top20_countries, "Top20%", "Others"))
+
+data_2019$country_group <- factor(data_2019$country_group, levels = c("Top20%", "Others"))
+t.test(patent_count ~ country_group, data = data_2019, alternative = "greater")
+
+ggplot(data_2019, aes(x = country_group, y = patent_count)) +
+  geom_boxplot() +
+  labs(title = "Patents: Top20% countries vs Others", y = "Patent Count", x = "") +
+  theme_minimal()
+wilcox.test(sales_growth_1y_percent ~ country_group, data = data_2019, alternative = "greater")
+
+ggplot(data_2019, aes(x = country_group, y = sales_growth_1y_percent)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.3, color = "steelblue") +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red") +
+  coord_cartesian(ylim = c(-100, 300)) +
+  labs(title = "Sales Growth: Top20% countries vs Others",
+       y = "1-Year Sales Growth (%)", x = "") +
+  theme_minimal()
+
+```
+
+Firms in the top 20% R&D-intensive countries did not show significantly higher patent counts or sales growth compared to others. The t-test (p = 0.7063) and Wilcoxon test (p = 0.1253) both indicate no statistical difference, suggesting that country-level R&D intensity has limited impact on firm-level outcomes.
+
+The empirical findings reveal a notable distinction between country-level and industry-level effects of R&D intensity. While firms in the top 20% R&D-intensive industries exhibit significantly higher innovation output and sales growth, no such relationship is observed at the country level. Specifically, neither patent counts nor sales growth differ significantly between firms from high-R&D countries and others. This suggests that the transmission of R&D intensity to firm-level performance is more strongly conditioned by industry-specific technological dynamics than by national R&D environments. 
+
+## OLS 
+
+```{r}
+panel_data <- merged_data %>%
+  arrange(company, year) %>%
+  group_by(company) %>%
+  mutate(
+    size_lag1  = dplyr::lag(sales_million, order_by = year)
+  ) %>%
+  mutate(
+    year_lag1   = dplyr::lag(year, order_by = year)
+  ) %>%
+  mutate(
+    rd_lag1     = dplyr::lag(rd_intensity_percent, order_by = year)
+  ) %>%
+  ungroup() 
+panel_data<-panel_data |> 
+   mutate(
+    growth = log(sales_million) - log(size_lag1)
+  ) 
+panel_data <- panel_data %>%
+  group_by(company) %>%
+  mutate(growth_lag1 = dplyr::lag(growth, order_by = year)) %>%
+  ungroup()
+
+ols_model <- feols(
+  growth ~ rd_lag1 + growth_lag1 + size_lag1 | icb_sector + country + year,
+  data = panel_data
+)
+
+summary(ols_model)
+```
+The OLS regression shows that lagged R&D intensity  has a positive and statistically significant effect on firm growth (p < 0.001), suggesting that past R&D investment contributes to future sales growth. In contrast, lagged firm growth  is negatively associated with current growth, which may indicate a mean-reversion effect. Firm size  has a weakly negative effect and is not statistically significant at the 5% level. The model controls for industry, country, and year fixed effects, and explains about 42% of the variation in growth .
+
+## OLS-IV
+
+```{r}
+panel_data <- panel_data %>%
+  group_by(company) %>%
+  arrange(year, .by_group = TRUE) %>%
+  mutate(
+    patent_lag1 = dplyr::lag(patent_count, order_by = year)
+  ) %>%
+  ungroup()
+
+iv_model <- feols(
+  growth ~ 1 + growth_lag1 + size_lag1 | icb_sector + country + year | rd_lag1 ~ patent_lag1,
+  data = panel_data
+)
+
+summary(iv_model)
+
+
+```
+
+To address endogeneity concerns, I employed a two-stage least squares (2SLS) approach, using lagged patent counts as an instrumental variable for R&D intensity. The results show that the predicted R&D intensity has no significant effect on firm growth (p = 0.486), and the first-stage F-statistic is low (F = 0.10), indicating a weak instrument.
+
+## GMM
+
+```{r}
+library(plm)
+merged_data <- merged_data %>%
+  mutate(
+    company = as.factor(company),
+    year = as.integer(year)
+  )
+
+pdata <- pdata.frame(merged_data, index = c("company", "year"))
+pdata <- na.omit(pdata)
+gmm_model <- plm::pgmm(
+  sales_growth_1y_percent ~ plm::lag(sales_growth_1y_percent, 1) + plm::lag(sales_million, 0:1) + plm::lag(rd_intensity_percent, 1) |
+    plm::lag(sales_growth_1y_percent, 2:3) + plm::lag(rd_intensity_percent, 2:3),
+  data = pdata,
+  effect = "individual",
+  model = "twosteps",
+  transformation = "ld"
+)
+
+plm:::summary.pgmm(gmm_model)
+
+```
+
+Using a two-step System GMM model on a panel of 417 firms from 2010 to 2019, I find that lagged R&D intensity has a significant and positive effect on firm sales growth. This indicates that prior R&D investment contributes meaningfully to subsequent firm performance. The model also reveals a slight mean-reverting tendency in sales growth, along with mixed effects of firm size—current size negatively affects growth, while lagged size has a positive influence. The AR(2) test suggests no second-order autocorrelation, supporting the validity of the model specification. 
+
+## LP-OLS
+
+```{r}
+merged_data1 <- merged_data %>%
+  mutate(
+    company = as.factor(company),
+    year = as.factor(year),
+    country = as.factor(country),
+    icb_sector = as.factor(icb_sector)
+  )
+
+contemp_data <- model.matrix(~ sales_million + year + country + icb_sector, data = merged_data1)[, -1]
+contemp_data <- as.data.frame(contemp_data)
+
+
+endog_data <- data.frame(
+  sales_growth_1y_percent = merged_data$sales_growth_1y_percent,
+  rd_intensity_percent = merged_data$rd_intensity_percent
+)
+
+results_lp <- lp_lin(
+  endog_data    = endog_data,
+  lags_endog_lin = 0,
+  shock_type     = 1,
+  trend          = 0,
+  confint        = 1.96,
+  hor            = 5,
+  contemp_data   = contemp_data  
+)
+
+summary(results_lp)
+plot(results_lp)
+
+```
+
+The result examines the dynamic relationship between R&D intensity and sales growth using local projection models. Results show R&D spending significantly boosts sales growth over 5 periods (all p-values <0.01), with effects peaking in period 5 (p=3.55e-08), suggesting cumulative benefits. Conversely, sales growth shows no significant impact on R&D decisions (all p-values >0.9). This confirms R&D as a key driver of future sales growth, without reverse causality.
+
+## LP-2SLS
+
+```{r}
+#endog_data <- data.frame(
+#  sales_growth_1y_percent = merged_data1$sales_growth_1y_percent,
+# rd_intensity_percent = merged_data1$rd_intensity_percent)
+# shock_var <- endog_data$rd_intensity_percent
+
+# instrum_var <- data.frame(patent_count = as.numeric(merged_data1$patent_count))
+# instrum_var <- data.frame(patent = as.numeric(merged_data1$patent_count + 0))
+
+# contemp_data <- model.matrix(~ sales_million + year + country + icb_sector, data = merged_data1)[, -1]
+# contemp_data <- as.data.frame(contemp_data)
+
+# results_lp_iv <- lp_lin_iv(
+#  endog_data      = endog_data,
+#  lags_endog_lin  = 0,
+#  shock           = shock_var,
+#  instrum         = instrum_var,
+#  contemp_data    = contemp_data,
+#  use_twosls      = TRUE,
+#  trend           = 0,
+#  confint         = 1.96,
+#  hor             = 5)
+
+# summary(results_lp_iv)
+# plot(results_lp_iv)
+```
+
+I tried to run the two-stage local projection model using lp_lin_iv() from the lpirfs package, following the official documentation and examples closely. While the baseline model (lp_lin) runs fine, the 2SLS version repeatedly gives the error:
+
+“Tool must be given in data.frame format”.
+
+Even when I pass in the tool (patent_count) as a properly formatted data frame (no NA, correct length, confirmed with str() and class()), the function still fails. I also tested a minimal example and reinstalled the latest GitHub version of lpirfs, but the problem persists.  /(TOT)/~~ ORZ

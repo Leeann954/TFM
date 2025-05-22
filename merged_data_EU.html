@@ -67,6 +67,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="merged_data_EU_files/libs/bootstrap/bootstrap.min.js"></script>
 <link href="merged_data_EU_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="merged_data_EU_files/libs/bootstrap/bootstrap-1bc8a17f135ab3d594c857e9f48e611b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="merged_data_EU_files/libs/kePrint-0.0.1/kePrint.js"></script>
+
+<link href="merged_data_EU_files/libs/lightable-0.0.1/lightable.css" rel="stylesheet">
+
 
 
 </head>
@@ -115,7 +119,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fixest)</span>
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stringmagic)</span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(plm)</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lpirfs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lpirfs)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stargazer)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(broom) </span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(kableExtra)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <section id="data-input-and-data-cleaning-from-2003-to-2023" class="level2">
 <h2 class="anchored" data-anchor-id="data-input-and-data-cleaning-from-2003-to-2023">Data input and Data cleaning from 2003 to 2023</h2>
@@ -1506,6 +1513,13 @@ employees_growth_1y_percent               capex_million
 </div>
 </div>
 <p>After imputation, we confirmed that all target variables no longer contain missing values, ensuring the dataset is complete and ready for subsequent analysis.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>merged_data <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span> </span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(company, year) <span class="sc">%&gt;%</span> </span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">patent_intensity_sales =</span> patent_count <span class="sc">/</span> sales_million</span>
+<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
 </section>
 <section id="cross-sectional-analysis" class="level2">
 <h2 class="anchored" data-anchor-id="cross-sectional-analysis">Cross sectional analysis</h2>
@@ -1513,46 +1527,35 @@ employees_growth_1y_percent               capex_million
 <h3 class="anchored" data-anchor-id="by-industry">1.by industry</h3>
 <p>H₀: Top20% ≤ Others H₁: Top20% &gt; Others</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>data_2019 <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span> <span class="fu">filter</span>(year <span class="sc">==</span> <span class="dv">2019</span>)</span>
-<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>data_2019 <span class="ot">&lt;-</span> data_2019 <span class="sc">%&gt;%</span></span>
-<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">log_rd =</span> <span class="fu">log1p</span>(rd_intensity_percent))</span>
-<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a>industry_avg_log <span class="ot">&lt;-</span> data_2019 <span class="sc">%&gt;%</span></span>
-<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(icb_sector) <span class="sc">%&gt;%</span></span>
-<span id="cb55-6"><a href="#cb55-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">mean_log_rd =</span> <span class="fu">mean</span>(log_rd, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
-<span id="cb55-7"><a href="#cb55-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb55-8"><a href="#cb55-8" aria-hidden="true" tabindex="-1"></a>threshold <span class="ot">&lt;-</span> <span class="fu">quantile</span>(industry_avg_log<span class="sc">$</span>mean_log_rd, <span class="fl">0.80</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb55-9"><a href="#cb55-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb55-10"><a href="#cb55-10" aria-hidden="true" tabindex="-1"></a>top20_industries <span class="ot">&lt;-</span> industry_avg_log <span class="sc">%&gt;%</span></span>
-<span id="cb55-11"><a href="#cb55-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(mean_log_rd <span class="sc">&gt;=</span> threshold) <span class="sc">%&gt;%</span></span>
-<span id="cb55-12"><a href="#cb55-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(icb_sector)</span>
-<span id="cb55-13"><a href="#cb55-13" aria-hidden="true" tabindex="-1"></a>data_2019 <span class="ot">&lt;-</span> data_2019 <span class="sc">%&gt;%</span></span>
-<span id="cb55-14"><a href="#cb55-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">industry_group =</span> <span class="fu">ifelse</span>(icb_sector <span class="sc">%in%</span> top20_industries, <span class="st">"Top20%"</span>, <span class="st">"Others"</span>))</span>
-<span id="cb55-15"><a href="#cb55-15" aria-hidden="true" tabindex="-1"></a>data_2019<span class="sc">$</span>industry_group <span class="ot">&lt;-</span> <span class="fu">factor</span>(data_2019<span class="sc">$</span>industry_group, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Top20%"</span>, <span class="st">"Others"</span>))</span>
-<span id="cb55-16"><a href="#cb55-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb55-17"><a href="#cb55-17" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(patent_count <span class="sc">~</span> industry_group, <span class="at">data =</span> data_2019, <span class="at">alternative =</span> <span class="st">"greater"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>data_2019 <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span> <span class="fu">filter</span>(year <span class="sc">==</span> <span class="dv">2019</span>)</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>data_2019 <span class="ot">&lt;-</span> data_2019 <span class="sc">%&gt;%</span></span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">log_rd =</span> <span class="fu">log1p</span>(rd_intensity_percent))</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>industry_avg_log <span class="ot">&lt;-</span> data_2019 <span class="sc">%&gt;%</span></span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(icb_sector) <span class="sc">%&gt;%</span></span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">mean_log_rd =</span> <span class="fu">mean</span>(log_rd, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a>threshold <span class="ot">&lt;-</span> <span class="fu">quantile</span>(industry_avg_log<span class="sc">$</span>mean_log_rd, <span class="fl">0.80</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a>top20_industries <span class="ot">&lt;-</span> industry_avg_log <span class="sc">%&gt;%</span></span>
+<span id="cb56-11"><a href="#cb56-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(mean_log_rd <span class="sc">&gt;=</span> threshold) <span class="sc">%&gt;%</span></span>
+<span id="cb56-12"><a href="#cb56-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(icb_sector)</span>
+<span id="cb56-13"><a href="#cb56-13" aria-hidden="true" tabindex="-1"></a>data_2019 <span class="ot">&lt;-</span> data_2019 <span class="sc">%&gt;%</span></span>
+<span id="cb56-14"><a href="#cb56-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">industry_group =</span> <span class="fu">ifelse</span>(icb_sector <span class="sc">%in%</span> top20_industries, <span class="st">"Top20%"</span>, <span class="st">"Others"</span>))</span>
+<span id="cb56-15"><a href="#cb56-15" aria-hidden="true" tabindex="-1"></a>data_2019<span class="sc">$</span>industry_group <span class="ot">&lt;-</span> <span class="fu">factor</span>(data_2019<span class="sc">$</span>industry_group, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Top20%"</span>, <span class="st">"Others"</span>))</span>
+<span id="cb56-16"><a href="#cb56-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-17"><a href="#cb56-17" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(patent_intensity_sales <span class="sc">~</span> industry_group, <span class="at">data =</span> data_2019, <span class="at">alternative =</span> <span class="st">"greater"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
     Welch Two Sample t-test
 
-data:  patent_count by industry_group
-t = 2.1562, df = 212.47, p-value = 0.0161
+data:  patent_intensity_sales by industry_group
+t = 2.5809, df = 182.49, p-value = 0.005321
 alternative hypothesis: true difference in means between group Top20% and group Others is greater than 0
 95 percent confidence interval:
- 29.36362      Inf
+ 0.04028729        Inf
 sample estimates:
 mean in group Top20% mean in group Others 
-            236.0273             110.4316 </code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(data_2019, <span class="fu">aes</span>(<span class="at">x =</span> industry_group, <span class="at">y =</span> patent_count)) <span class="sc">+</span></span>
-<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
-<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Patens：Top20% industry vs others"</span>, <span class="at">y =</span> <span class="st">"Patent Count"</span>, <span class="at">x =</span> <span class="st">""</span>) <span class="sc">+</span></span>
-<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="merged_data_EU_files/figure-html/unnamed-chunk-43-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
+          0.12815361           0.01606342 </code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb58"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wilcox.test</span>(sales_growth_1y_percent <span class="sc">~</span> industry_group, <span class="at">data =</span> data_2019, <span class="at">alternative =</span> <span class="st">"greater"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -1563,66 +1566,93 @@ data:  sales_growth_1y_percent by industry_group
 W = 25240, p-value = 0.0008601
 alternative hypothesis: true location shift is greater than 0</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(data_2019, <span class="fu">aes</span>(<span class="at">x =</span> industry_group, <span class="at">y =</span> sales_growth_1y_percent)) <span class="sc">+</span></span>
-<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>(<span class="at">outlier.shape =</span> <span class="cn">NA</span>) <span class="sc">+</span></span>
-<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_jitter</span>(<span class="at">width =</span> <span class="fl">0.2</span>, <span class="at">alpha =</span> <span class="fl">0.3</span>, <span class="at">color =</span> <span class="st">"steelblue"</span>) <span class="sc">+</span></span>
-<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_summary</span>(<span class="at">fun =</span> mean, <span class="at">geom =</span> <span class="st">"point"</span>, <span class="at">shape =</span> <span class="dv">21</span>, <span class="at">size =</span> <span class="dv">3</span>, <span class="at">fill =</span> <span class="st">"red"</span>) <span class="sc">+</span></span>
-<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">100</span>, <span class="dv">300</span>)) <span class="sc">+</span>  </span>
-<span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Sales Growth : Top20% vs Others"</span>,</span>
-<span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"1-Year Sales Growth (%)"</span>, <span class="at">x =</span> <span class="st">""</span>) <span class="sc">+</span></span>
-<span id="cb60-8"><a href="#cb60-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="merged_data_EU_files/figure-html/unnamed-chunk-43-2.png" class="img-fluid figure-img" width="672"></p>
-</figure>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a> desc_stats <span class="ot">&lt;-</span> data_2019 <span class="sc">%&gt;%</span> </span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(industry_group) <span class="sc">%&gt;%</span> </span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_firms           =</span> <span class="fu">n</span>(),</span>
+<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_pat_int      =</span> <span class="fu">mean</span>(patent_intensity_sales,  <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">sd_pat_int        =</span> <span class="fu">sd</span>(patent_intensity_sales,    <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_sales_growth =</span> <span class="fu">mean</span>(sales_growth_1y_percent, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb60-8"><a href="#cb60-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">sd_sales_growth   =</span> <span class="fu">sd</span>(sales_growth_1y_percent,   <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb60-9"><a href="#cb60-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb60-10"><a href="#cb60-10" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb60-11"><a href="#cb60-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-12"><a href="#cb60-12" aria-hidden="true" tabindex="-1"></a>pat_test   <span class="ot">&lt;-</span> <span class="fu">t.test</span>(patent_intensity_sales <span class="sc">~</span> industry_group,</span>
+<span id="cb60-13"><a href="#cb60-13" aria-hidden="true" tabindex="-1"></a>                     <span class="at">data =</span> data_2019, <span class="at">alternative =</span> <span class="st">"greater"</span>) <span class="sc">%&gt;%</span> <span class="fu">tidy</span>()</span>
+<span id="cb60-14"><a href="#cb60-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-15"><a href="#cb60-15" aria-hidden="true" tabindex="-1"></a>sales_test <span class="ot">&lt;-</span> <span class="fu">wilcox.test</span>(sales_growth_1y_percent <span class="sc">~</span> industry_group,</span>
+<span id="cb60-16"><a href="#cb60-16" aria-hidden="true" tabindex="-1"></a>                          <span class="at">data =</span> data_2019, <span class="at">alternative =</span> <span class="st">"greater"</span>) <span class="sc">%&gt;%</span> <span class="fu">tidy</span>()</span>
+<span id="cb60-17"><a href="#cb60-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-18"><a href="#cb60-18" aria-hidden="true" tabindex="-1"></a>test_rows <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb60-19"><a href="#cb60-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">industry_group     =</span> <span class="fu">c</span>(<span class="st">"t-test (patent intensity)"</span>, <span class="st">"Wilcoxon (sales growth)"</span>),</span>
+<span id="cb60-20"><a href="#cb60-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_firms            =</span> <span class="cn">NA</span>,                </span>
+<span id="cb60-21"><a href="#cb60-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_pat_int       =</span> <span class="fu">c</span>(pat_test<span class="sc">$</span>estimate, sales_test<span class="sc">$</span>estimate),</span>
+<span id="cb60-22"><a href="#cb60-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">sd_pat_int         =</span> <span class="fu">c</span>(pat_test<span class="sc">$</span>statistic, sales_test<span class="sc">$</span>statistic),</span>
+<span id="cb60-23"><a href="#cb60-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_sales_growth  =</span> <span class="fu">c</span>(pat_test<span class="sc">$</span>p.value,  sales_test<span class="sc">$</span>p.value),</span>
+<span id="cb60-24"><a href="#cb60-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">sd_sales_growth    =</span> <span class="cn">NA</span></span>
+<span id="cb60-25"><a href="#cb60-25" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb60-26"><a href="#cb60-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-27"><a href="#cb60-27" aria-hidden="true" tabindex="-1"></a>results_table <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(desc_stats, test_rows)</span>
+<span id="cb60-28"><a href="#cb60-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-29"><a href="#cb60-29" aria-hidden="true" tabindex="-1"></a><span class="fu">stargazer</span>(results_table,</span>
+<span id="cb60-30"><a href="#cb60-30" aria-hidden="true" tabindex="-1"></a>          <span class="at">type   =</span> <span class="st">"text"</span>,     </span>
+<span id="cb60-31"><a href="#cb60-31" aria-hidden="true" tabindex="-1"></a>          <span class="at">title  =</span> <span class="st">"Top-20 % Industries vs. Others (2019) "</span>,</span>
+<span id="cb60-32"><a href="#cb60-32" aria-hidden="true" tabindex="-1"></a>          <span class="at">summary =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb60-33"><a href="#cb60-33" aria-hidden="true" tabindex="-1"></a>          <span class="at">digits =</span> <span class="dv">2</span>,</span>
+<span id="cb60-34"><a href="#cb60-34" aria-hidden="true" tabindex="-1"></a>          <span class="at">align  =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb60-35"><a href="#cb60-35" aria-hidden="true" tabindex="-1"></a>          <span class="at">covariate.labels =</span> <span class="fu">c</span>(</span>
+<span id="cb60-36"><a href="#cb60-36" aria-hidden="true" tabindex="-1"></a>            <span class="st">"Group / Test"</span>, <span class="st">"N firms"</span>,</span>
+<span id="cb60-37"><a href="#cb60-37" aria-hidden="true" tabindex="-1"></a>            <span class="st">"Mean Patent Intensity"</span>, <span class="st">"SD Patent Intensity"</span>,</span>
+<span id="cb60-38"><a href="#cb60-38" aria-hidden="true" tabindex="-1"></a>            <span class="st">"Mean Sales Growth (%)"</span>, <span class="st">"SD Sales Growth (%)"</span></span>
+<span id="cb60-39"><a href="#cb60-39" aria-hidden="true" tabindex="-1"></a>          ))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Top-20 % Industries vs. Others (2019)
+==============================================================================================================================================
+Group / Test          N firms          Mean Patent Intensity SD Patent Intensity  Mean Sales Growth (%)  SD Sales Growth (%)  sd_sales_growth 
+----------------------------------------------------------------------------------------------------------------------------------------------
+     1                Top20%                    183           0.128153606953132   c(0.587133411661654)     264.610602583374   3299.55679031619
+     2                Others                    234          0.0160634155962845   c(0.0244059337083988)    5.01392603208252   19.1133643813465
+     3       t-test (patent intensity)          NA            0.112090191356847  c(t = 2.58085215616587) 0.00532059859159674         NA       
+     4        Wilcoxon (sales growth)           NA            0.112090191356847       c(W = 25240)       0.000860114239938301        NA       
+----------------------------------------------------------------------------------------------------------------------------------------------</code></pre>
 </div>
 </div>
-</div>
-<p>Based on 2019 data, firms in the top 20% R&amp;D-intensive industries demonstrate significantly higher innovation output and stronger growth performance compared to others. A Welch two-sample t-test shows that their average patent count is significantly greater (p = 0.0161), and a Wilcoxon rank-sum test confirms that their sales growth is also significantly higher (p = 0.0009). These results support the hypothesis that operating in more R&amp;D-intensive industries is associated with both increased innovation and better firm-level growth outcomes.</p>
+<p>Based on 2019 data, firms in the top 20% of R&amp;D-intensive industries show significantly stronger innovation output and growth performance compared to those in other industries. A Welch two-sample t-test indicates that their average patent intensity (patents per million in sales) is significantly higher (p = 0.005), with a mean of 0.13 versus just 0.02 in other industries—nearly an eightfold difference. Similarly, the Wilcoxon rank-sum test shows that sales growth is also significantly higher in the top 20% group (p &lt; 0.001), with an average growth rate of 265%, compared to 5% in the rest. However, the large standard deviation in sales growth (around 3300%) suggests substantial variation, likely influenced by a few extreme high-growth firms. Overall, these findings support the hypothesis that firms in more R&amp;D-intensive industries tend to be more innovative and achieve better growth outcomes.</p>
 </section>
 <section id="by-country" class="level3">
 <h3 class="anchored" data-anchor-id="by-country">2.by country</h3>
 <p>H₀: Top20% ≤ Others H₁: Top20% &gt; Others</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a>country_avg_log <span class="ot">&lt;-</span> data_2019 <span class="sc">%&gt;%</span></span>
-<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(country) <span class="sc">%&gt;%</span></span>
-<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">mean_log_rd =</span> <span class="fu">mean</span>(log_rd, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
-<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a>threshold <span class="ot">&lt;-</span> <span class="fu">quantile</span>(country_avg_log<span class="sc">$</span>mean_log_rd, <span class="fl">0.80</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb61-6"><a href="#cb61-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb61-7"><a href="#cb61-7" aria-hidden="true" tabindex="-1"></a>top20_countries <span class="ot">&lt;-</span> country_avg_log <span class="sc">%&gt;%</span></span>
-<span id="cb61-8"><a href="#cb61-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(mean_log_rd <span class="sc">&gt;=</span> threshold) <span class="sc">%&gt;%</span></span>
-<span id="cb61-9"><a href="#cb61-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(country)</span>
-<span id="cb61-10"><a href="#cb61-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb61-11"><a href="#cb61-11" aria-hidden="true" tabindex="-1"></a>data_2019 <span class="ot">&lt;-</span> data_2019 <span class="sc">%&gt;%</span></span>
-<span id="cb61-12"><a href="#cb61-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">country_group =</span> <span class="fu">ifelse</span>(country <span class="sc">%in%</span> top20_countries, <span class="st">"Top20%"</span>, <span class="st">"Others"</span>))</span>
-<span id="cb61-13"><a href="#cb61-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb61-14"><a href="#cb61-14" aria-hidden="true" tabindex="-1"></a>data_2019<span class="sc">$</span>country_group <span class="ot">&lt;-</span> <span class="fu">factor</span>(data_2019<span class="sc">$</span>country_group, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Top20%"</span>, <span class="st">"Others"</span>))</span>
-<span id="cb61-15"><a href="#cb61-15" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(patent_count <span class="sc">~</span> country_group, <span class="at">data =</span> data_2019, <span class="at">alternative =</span> <span class="st">"greater"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a>country_avg_log <span class="ot">&lt;-</span> data_2019 <span class="sc">%&gt;%</span></span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(country) <span class="sc">%&gt;%</span></span>
+<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">mean_log_rd =</span> <span class="fu">mean</span>(log_rd, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb62-4"><a href="#cb62-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-5"><a href="#cb62-5" aria-hidden="true" tabindex="-1"></a>threshold <span class="ot">&lt;-</span> <span class="fu">quantile</span>(country_avg_log<span class="sc">$</span>mean_log_rd, <span class="fl">0.80</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb62-6"><a href="#cb62-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-7"><a href="#cb62-7" aria-hidden="true" tabindex="-1"></a>top20_countries <span class="ot">&lt;-</span> country_avg_log <span class="sc">%&gt;%</span></span>
+<span id="cb62-8"><a href="#cb62-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(mean_log_rd <span class="sc">&gt;=</span> threshold) <span class="sc">%&gt;%</span></span>
+<span id="cb62-9"><a href="#cb62-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(country)</span>
+<span id="cb62-10"><a href="#cb62-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-11"><a href="#cb62-11" aria-hidden="true" tabindex="-1"></a>data_2019 <span class="ot">&lt;-</span> data_2019 <span class="sc">%&gt;%</span></span>
+<span id="cb62-12"><a href="#cb62-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">country_group =</span> <span class="fu">ifelse</span>(country <span class="sc">%in%</span> top20_countries, <span class="st">"Top20%"</span>, <span class="st">"Others"</span>))</span>
+<span id="cb62-13"><a href="#cb62-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-14"><a href="#cb62-14" aria-hidden="true" tabindex="-1"></a>data_2019<span class="sc">$</span>country_group <span class="ot">&lt;-</span> <span class="fu">factor</span>(data_2019<span class="sc">$</span>country_group, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Top20%"</span>, <span class="st">"Others"</span>))</span>
+<span id="cb62-15"><a href="#cb62-15" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(patent_intensity_sales <span class="sc">~</span> country_group, <span class="at">data =</span> data_2019, <span class="at">alternative =</span> <span class="st">"greater"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
     Welch Two Sample t-test
 
-data:  patent_count by country_group
-t = -0.54335, df = 283.97, p-value = 0.7063
+data:  patent_intensity_sales by country_group
+t = 1.5565, df = 95.089, p-value = 0.06145
 alternative hypothesis: true difference in means between group Top20% and group Others is greater than 0
 95 percent confidence interval:
- -101.8918       Inf
+ -0.008385129          Inf
 sample estimates:
 mean in group Top20% mean in group Others 
-            146.0000             171.2384 </code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(data_2019, <span class="fu">aes</span>(<span class="at">x =</span> country_group, <span class="at">y =</span> patent_count)) <span class="sc">+</span></span>
-<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
-<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Patents: Top20% countries vs Others"</span>, <span class="at">y =</span> <span class="st">"Patent Count"</span>, <span class="at">x =</span> <span class="st">""</span>) <span class="sc">+</span></span>
-<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="merged_data_EU_files/figure-html/unnamed-chunk-44-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
+          0.16196719           0.03710846 </code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb64"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a><span class="fu">wilcox.test</span>(sales_growth_1y_percent <span class="sc">~</span> country_group, <span class="at">data =</span> data_2019, <span class="at">alternative =</span> <span class="st">"greater"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -1633,57 +1663,94 @@ data:  sales_growth_1y_percent by country_group
 W = 16363, p-value = 0.1253
 alternative hypothesis: true location shift is greater than 0</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(data_2019, <span class="fu">aes</span>(<span class="at">x =</span> country_group, <span class="at">y =</span> sales_growth_1y_percent)) <span class="sc">+</span></span>
-<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>(<span class="at">outlier.shape =</span> <span class="cn">NA</span>) <span class="sc">+</span></span>
-<span id="cb66-3"><a href="#cb66-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_jitter</span>(<span class="at">width =</span> <span class="fl">0.2</span>, <span class="at">alpha =</span> <span class="fl">0.3</span>, <span class="at">color =</span> <span class="st">"steelblue"</span>) <span class="sc">+</span></span>
-<span id="cb66-4"><a href="#cb66-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_summary</span>(<span class="at">fun =</span> mean, <span class="at">geom =</span> <span class="st">"point"</span>, <span class="at">shape =</span> <span class="dv">21</span>, <span class="at">size =</span> <span class="dv">3</span>, <span class="at">fill =</span> <span class="st">"red"</span>) <span class="sc">+</span></span>
-<span id="cb66-5"><a href="#cb66-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">100</span>, <span class="dv">300</span>)) <span class="sc">+</span></span>
-<span id="cb66-6"><a href="#cb66-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Sales Growth: Top20% countries vs Others"</span>,</span>
-<span id="cb66-7"><a href="#cb66-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"1-Year Sales Growth (%)"</span>, <span class="at">x =</span> <span class="st">""</span>) <span class="sc">+</span></span>
-<span id="cb66-8"><a href="#cb66-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="merged_data_EU_files/figure-html/unnamed-chunk-44-2.png" class="img-fluid figure-img" width="672"></p>
-</figure>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a>desc_stats <span class="ot">&lt;-</span> data_2019 <span class="sc">%&gt;%</span> </span>
+<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(country_group) <span class="sc">%&gt;%</span> </span>
+<span id="cb66-3"><a href="#cb66-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb66-4"><a href="#cb66-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_firms           =</span> <span class="fu">n</span>(),</span>
+<span id="cb66-5"><a href="#cb66-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_pat_int      =</span> <span class="fu">mean</span>(patent_intensity_sales,  <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb66-6"><a href="#cb66-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">sd_pat_int        =</span> <span class="fu">sd</span>(patent_intensity_sales,    <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb66-7"><a href="#cb66-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_sales_growth =</span> <span class="fu">mean</span>(sales_growth_1y_percent, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb66-8"><a href="#cb66-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">sd_sales_growth   =</span> <span class="fu">sd</span>(sales_growth_1y_percent,   <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb66-9"><a href="#cb66-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb66-10"><a href="#cb66-10" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb66-11"><a href="#cb66-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-12"><a href="#cb66-12" aria-hidden="true" tabindex="-1"></a>pat_test   <span class="ot">&lt;-</span> <span class="fu">t.test</span>(patent_intensity_sales <span class="sc">~</span> country_group,</span>
+<span id="cb66-13"><a href="#cb66-13" aria-hidden="true" tabindex="-1"></a>                     <span class="at">data =</span> data_2019, <span class="at">alternative =</span> <span class="st">"greater"</span>) <span class="sc">%&gt;%</span> <span class="fu">tidy</span>()</span>
+<span id="cb66-14"><a href="#cb66-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-15"><a href="#cb66-15" aria-hidden="true" tabindex="-1"></a>sales_test <span class="ot">&lt;-</span> <span class="fu">wilcox.test</span>(sales_growth_1y_percent <span class="sc">~</span> country_group,</span>
+<span id="cb66-16"><a href="#cb66-16" aria-hidden="true" tabindex="-1"></a>                          <span class="at">data =</span> data_2019, <span class="at">alternative =</span> <span class="st">"greater"</span>) <span class="sc">%&gt;%</span> <span class="fu">tidy</span>()</span>
+<span id="cb66-17"><a href="#cb66-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-18"><a href="#cb66-18" aria-hidden="true" tabindex="-1"></a>test_rows <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb66-19"><a href="#cb66-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">country_group      =</span> <span class="fu">c</span>(<span class="st">"t-test (patent intensity)"</span>, <span class="st">"Wilcoxon (sales growth)"</span>),</span>
+<span id="cb66-20"><a href="#cb66-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_firms            =</span> <span class="cn">NA</span>,</span>
+<span id="cb66-21"><a href="#cb66-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_pat_int       =</span> <span class="fu">c</span>(pat_test<span class="sc">$</span>estimate, sales_test<span class="sc">$</span>estimate),</span>
+<span id="cb66-22"><a href="#cb66-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">sd_pat_int         =</span> <span class="fu">c</span>(pat_test<span class="sc">$</span>statistic, sales_test<span class="sc">$</span>statistic),</span>
+<span id="cb66-23"><a href="#cb66-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean_sales_growth  =</span> <span class="fu">c</span>(pat_test<span class="sc">$</span>p.value,   sales_test<span class="sc">$</span>p.value),</span>
+<span id="cb66-24"><a href="#cb66-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">sd_sales_growth    =</span> <span class="cn">NA</span></span>
+<span id="cb66-25"><a href="#cb66-25" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb66-26"><a href="#cb66-26" aria-hidden="true" tabindex="-1"></a>results_table <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(desc_stats, test_rows)</span>
+<span id="cb66-27"><a href="#cb66-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-28"><a href="#cb66-28" aria-hidden="true" tabindex="-1"></a><span class="fu">stargazer</span>(results_table,</span>
+<span id="cb66-29"><a href="#cb66-29" aria-hidden="true" tabindex="-1"></a>          <span class="at">type   =</span> <span class="st">"text"</span>,     </span>
+<span id="cb66-30"><a href="#cb66-30" aria-hidden="true" tabindex="-1"></a>          <span class="at">summary =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb66-31"><a href="#cb66-31" aria-hidden="true" tabindex="-1"></a>          <span class="at">title  =</span> <span class="st">"Top-20 % Countries vs. Others (2019) "</span>,</span>
+<span id="cb66-32"><a href="#cb66-32" aria-hidden="true" tabindex="-1"></a>          <span class="at">digits =</span> <span class="dv">2</span>,</span>
+<span id="cb66-33"><a href="#cb66-33" aria-hidden="true" tabindex="-1"></a>          <span class="at">align  =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb66-34"><a href="#cb66-34" aria-hidden="true" tabindex="-1"></a>          <span class="at">covariate.labels =</span> <span class="fu">c</span>(</span>
+<span id="cb66-35"><a href="#cb66-35" aria-hidden="true" tabindex="-1"></a>            <span class="st">"Group / Test"</span>, <span class="st">"N firms"</span>,</span>
+<span id="cb66-36"><a href="#cb66-36" aria-hidden="true" tabindex="-1"></a>            <span class="st">"Mean Patent Intensity"</span>, <span class="st">"SD Patent Intensity"</span>,</span>
+<span id="cb66-37"><a href="#cb66-37" aria-hidden="true" tabindex="-1"></a>            <span class="st">"Mean Sales Growth (%)"</span>, <span class="st">"SD Sales Growth (%)"</span></span>
+<span id="cb66-38"><a href="#cb66-38" aria-hidden="true" tabindex="-1"></a>          ))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Top-20 % Countries vs. Others (2019)
+=============================================================================================================================================
+Group / Test          N firms          Mean Patent Intensity SD Patent Intensity  Mean Sales Growth (%)  SD Sales Growth (%) sd_sales_growth 
+---------------------------------------------------------------------------------------------------------------------------------------------
+     1                Top20%                    94            0.161967186337509    c(0.77342201137379)    480.370914203577   4598.94825651109
+     2                Others                    323          0.0371084637963712   c(0.151627773934425)    13.7527338363109   132.107650431179
+     3       t-test (patent intensity)          NA            0.124858722541138  c(t = 1.55650636354196) 0.0614549501913856         NA       
+     4        Wilcoxon (sales growth)           NA            0.124858722541138       c(W = 16363)        0.125304723316033         NA       
+---------------------------------------------------------------------------------------------------------------------------------------------</code></pre>
 </div>
 </div>
-</div>
-<p>Firms in the top 20% R&amp;D-intensive countries did not show significantly higher patent counts or sales growth compared to others. The t-test (p = 0.7063) and Wilcoxon test (p = 0.1253) both indicate no statistical difference, suggesting that country-level R&amp;D intensity has limited impact on firm-level outcomes.</p>
-<p>The empirical findings reveal a notable distinction between country-level and industry-level effects of R&amp;D intensity. While firms in the top 20% R&amp;D-intensive industries exhibit significantly higher innovation output and sales growth, no such relationship is observed at the country level. Specifically, neither patent counts nor sales growth differ significantly between firms from high-R&amp;D countries and others. This suggests that the transmission of R&amp;D intensity to firm-level performance is more strongly conditioned by industry-specific technological dynamics than by national R&amp;D environments.</p>
+<p>Firms in the top 20% of R&amp;D-intensive countries did not show significantly higher patent intensity or sales growth compared to others. The t-test (p = 0.061) and Wilcoxon test (p = 0.125) both suggest no statistically significant differences, implying that the impact of country-level R&amp;D intensity on firm outcomes may be weaker or less direct.</p>
+<p>These empirical results highlight a notable contrast between industry- and country-level effects of R&amp;D intensity. While firms in top R&amp;D-intensive industries exhibit significantly higher innovation output and sales growth, no such relationship is observed at the country level. This suggests that the transmission of R&amp;D to firm performance may be more strongly shaped by industry-specific technological dynamics than by broader national R&amp;D environments.</p>
 </section>
 </section>
 <section id="ols" class="level2">
 <h2 class="anchored" data-anchor-id="ols">OLS</h2>
+<p>1.R&amp;D intensity</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a>panel_data <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span></span>
-<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(company, year) <span class="sc">%&gt;%</span></span>
-<span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(company) <span class="sc">%&gt;%</span></span>
-<span id="cb67-4"><a href="#cb67-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb67-5"><a href="#cb67-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">size_lag1  =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(sales_million, <span class="at">order_by =</span> year)</span>
-<span id="cb67-6"><a href="#cb67-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb67-7"><a href="#cb67-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb67-8"><a href="#cb67-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">year_lag1   =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(year, <span class="at">order_by =</span> year)</span>
-<span id="cb67-9"><a href="#cb67-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb67-10"><a href="#cb67-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb67-11"><a href="#cb67-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">rd_lag1     =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(rd_intensity_percent, <span class="at">order_by =</span> year)</span>
-<span id="cb67-12"><a href="#cb67-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb67-13"><a href="#cb67-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() </span>
-<span id="cb67-14"><a href="#cb67-14" aria-hidden="true" tabindex="-1"></a>panel_data<span class="ot">&lt;-</span>panel_data <span class="sc">|&gt;</span> </span>
-<span id="cb67-15"><a href="#cb67-15" aria-hidden="true" tabindex="-1"></a>   <span class="fu">mutate</span>(</span>
-<span id="cb67-16"><a href="#cb67-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">growth =</span> <span class="fu">log</span>(sales_million) <span class="sc">-</span> <span class="fu">log</span>(size_lag1)</span>
-<span id="cb67-17"><a href="#cb67-17" aria-hidden="true" tabindex="-1"></a>  ) </span>
-<span id="cb67-18"><a href="#cb67-18" aria-hidden="true" tabindex="-1"></a>panel_data <span class="ot">&lt;-</span> panel_data <span class="sc">%&gt;%</span></span>
-<span id="cb67-19"><a href="#cb67-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(company) <span class="sc">%&gt;%</span></span>
-<span id="cb67-20"><a href="#cb67-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">growth_lag1 =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(growth, <span class="at">order_by =</span> year)) <span class="sc">%&gt;%</span></span>
-<span id="cb67-21"><a href="#cb67-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
-<span id="cb67-22"><a href="#cb67-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb67-23"><a href="#cb67-23" aria-hidden="true" tabindex="-1"></a>ols_model <span class="ot">&lt;-</span> <span class="fu">feols</span>(</span>
-<span id="cb67-24"><a href="#cb67-24" aria-hidden="true" tabindex="-1"></a>  growth <span class="sc">~</span> rd_lag1 <span class="sc">+</span> growth_lag1 <span class="sc">+</span> size_lag1 <span class="sc">|</span> icb_sector <span class="sc">+</span> country <span class="sc">+</span> year,</span>
-<span id="cb67-25"><a href="#cb67-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> panel_data</span>
-<span id="cb67-26"><a href="#cb67-26" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb67-27"><a href="#cb67-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb67-28"><a href="#cb67-28" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(ols_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>panel_data <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span></span>
+<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(company, year) <span class="sc">%&gt;%</span></span>
+<span id="cb68-3"><a href="#cb68-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(company) <span class="sc">%&gt;%</span></span>
+<span id="cb68-4"><a href="#cb68-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb68-5"><a href="#cb68-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">size_lag1  =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(sales_million, <span class="at">order_by =</span> year)</span>
+<span id="cb68-6"><a href="#cb68-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb68-7"><a href="#cb68-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb68-8"><a href="#cb68-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">year_lag1   =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(year, <span class="at">order_by =</span> year)</span>
+<span id="cb68-9"><a href="#cb68-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb68-10"><a href="#cb68-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb68-11"><a href="#cb68-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">rd_lag1     =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(rd_intensity_percent, <span class="at">order_by =</span> year)</span>
+<span id="cb68-12"><a href="#cb68-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb68-13"><a href="#cb68-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() </span>
+<span id="cb68-14"><a href="#cb68-14" aria-hidden="true" tabindex="-1"></a>panel_data<span class="ot">&lt;-</span>panel_data <span class="sc">|&gt;</span> </span>
+<span id="cb68-15"><a href="#cb68-15" aria-hidden="true" tabindex="-1"></a>   <span class="fu">mutate</span>(</span>
+<span id="cb68-16"><a href="#cb68-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">growth =</span> <span class="fu">log</span>(sales_million) <span class="sc">-</span> <span class="fu">log</span>(size_lag1)</span>
+<span id="cb68-17"><a href="#cb68-17" aria-hidden="true" tabindex="-1"></a>  ) </span>
+<span id="cb68-18"><a href="#cb68-18" aria-hidden="true" tabindex="-1"></a>panel_data <span class="ot">&lt;-</span> panel_data <span class="sc">%&gt;%</span></span>
+<span id="cb68-19"><a href="#cb68-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(company) <span class="sc">%&gt;%</span></span>
+<span id="cb68-20"><a href="#cb68-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">growth_lag1 =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(growth, <span class="at">order_by =</span> year)) <span class="sc">%&gt;%</span></span>
+<span id="cb68-21"><a href="#cb68-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb68-22"><a href="#cb68-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb68-23"><a href="#cb68-23" aria-hidden="true" tabindex="-1"></a>ols_model <span class="ot">&lt;-</span> <span class="fu">feols</span>(</span>
+<span id="cb68-24"><a href="#cb68-24" aria-hidden="true" tabindex="-1"></a>  growth <span class="sc">~</span> rd_lag1 <span class="sc">+</span> growth_lag1 <span class="sc">+</span> size_lag1 <span class="sc">|</span> icb_sector <span class="sc">+</span> country <span class="sc">+</span> year,</span>
+<span id="cb68-25"><a href="#cb68-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> panel_data</span>
+<span id="cb68-26"><a href="#cb68-26" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb68-27"><a href="#cb68-27" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(ols_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>OLS estimation, Dep. Var.: growth
 Observations: 3,227
@@ -1699,25 +1766,108 @@ RMSE: 0.438075     Adj. R2: 0.420507
                  Within R2: 0.42887 </code></pre>
 </div>
 </div>
-<p>The OLS regression shows that lagged R&amp;D intensity has a positive and statistically significant effect on firm growth (p &lt; 0.001), suggesting that past R&amp;D investment contributes to future sales growth. In contrast, lagged firm growth is negatively associated with current growth, which may indicate a mean-reversion effect. Firm size has a weakly negative effect and is not statistically significant at the 5% level. The model controls for industry, country, and year fixed effects, and explains about 42% of the variation in growth .</p>
+<p>The OLS regression results show that lagged R&amp;D intensity has a positive and statistically significant effect on firm-level sales growth (coefficient = 0.0000215, p &lt; 0.001). This means that a 1 percentage point increase in R&amp;D intensity leads to an approximate 0.00215% increase in sales growth. Although the magnitude is small, the effect is meaningful in a log-linear model and may accumulate over time.</p>
+<p>In contrast, lagged firm growth is significantly negative (–0.55), indicating a mean-reversion effect—firms that grew faster in the previous period tend to slow down subsequently. Lagged firm size also shows a weakly negative effect on growth, though it is not statistically significant at the 5% level.</p>
+<p>The model includes industry, country, and year fixed effects, and explains approximately 42% of the variation in firm growth, with standard errors clustered at the industry level.</p>
+<p>2.R&amp;D growth</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a>panel_data1 <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span></span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(company, year) <span class="sc">%&gt;%</span></span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(company) <span class="sc">%&gt;%</span></span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb70-5"><a href="#cb70-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">size_lag1   =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(sales_million, <span class="at">order_by =</span> year),</span>
+<span id="cb70-6"><a href="#cb70-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">year_lag1   =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(year, <span class="at">order_by =</span> year),</span>
+<span id="cb70-7"><a href="#cb70-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">rd_lag1     =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(rd_growth_1y_percent, <span class="at">order_by =</span> year) </span>
+<span id="cb70-8"><a href="#cb70-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb70-9"><a href="#cb70-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb70-10"><a href="#cb70-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb70-11"><a href="#cb70-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">growth =</span> <span class="fu">log</span>(sales_million) <span class="sc">-</span> <span class="fu">log</span>(size_lag1)</span>
+<span id="cb70-12"><a href="#cb70-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb70-13"><a href="#cb70-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(company) <span class="sc">%&gt;%</span></span>
+<span id="cb70-14"><a href="#cb70-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb70-15"><a href="#cb70-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">growth_lag1 =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(growth, <span class="at">order_by =</span> year)</span>
+<span id="cb70-16"><a href="#cb70-16" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb70-17"><a href="#cb70-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb70-18"><a href="#cb70-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb70-19"><a href="#cb70-19" aria-hidden="true" tabindex="-1"></a>ols_model_growth <span class="ot">&lt;-</span> <span class="fu">feols</span>(</span>
+<span id="cb70-20"><a href="#cb70-20" aria-hidden="true" tabindex="-1"></a>  growth <span class="sc">~</span> rd_lag1 <span class="sc">+</span> growth_lag1 <span class="sc">+</span> size_lag1 <span class="sc">|</span> icb_sector <span class="sc">+</span> country <span class="sc">+</span> year,</span>
+<span id="cb70-21"><a href="#cb70-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> panel_data1</span>
+<span id="cb70-22"><a href="#cb70-22" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb70-23"><a href="#cb70-23" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(ols_model_growth)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>OLS estimation, Dep. Var.: growth
+Observations: 3,227
+Fixed-effects: icb_sector: 37,  country: 17,  year: 8
+Standard-errors: Clustered (icb_sector) 
+                Estimate  Std. Error   t value   Pr(&gt;|t|)    
+rd_lag1      0.000290008 0.000232090   1.24955 2.1953e-01    
+growth_lag1 -0.571456436 0.040798252 -14.00689 3.8322e-16 ***
+size_lag1   -0.000000555 0.000000331  -1.67563 1.0248e-01    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.441417     Adj. R2: 0.411631
+                 Within R2: 0.420123</code></pre>
+</div>
+</div>
+<p>3.R&amp;D log level</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>panel_data2 <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span></span>
+<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(company, year) <span class="sc">%&gt;%</span></span>
+<span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(company) <span class="sc">%&gt;%</span></span>
+<span id="cb72-4"><a href="#cb72-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb72-5"><a href="#cb72-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">size_lag1   =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(sales_million, <span class="at">order_by =</span> year),</span>
+<span id="cb72-6"><a href="#cb72-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">year_lag1   =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(year, <span class="at">order_by =</span> year),</span>
+<span id="cb72-7"><a href="#cb72-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">rd_log      =</span> <span class="fu">log1p</span>(rd_million),  </span>
+<span id="cb72-8"><a href="#cb72-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">rd_lag1     =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(rd_log, <span class="at">order_by =</span> year)  </span>
+<span id="cb72-9"><a href="#cb72-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb72-10"><a href="#cb72-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb72-11"><a href="#cb72-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb72-12"><a href="#cb72-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">growth =</span> <span class="fu">log</span>(sales_million) <span class="sc">-</span> <span class="fu">log</span>(size_lag1)</span>
+<span id="cb72-13"><a href="#cb72-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb72-14"><a href="#cb72-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(company) <span class="sc">%&gt;%</span></span>
+<span id="cb72-15"><a href="#cb72-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb72-16"><a href="#cb72-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">growth_lag1 =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(growth, <span class="at">order_by =</span> year)</span>
+<span id="cb72-17"><a href="#cb72-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb72-18"><a href="#cb72-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb72-19"><a href="#cb72-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-20"><a href="#cb72-20" aria-hidden="true" tabindex="-1"></a>ols_model_log <span class="ot">&lt;-</span> <span class="fu">feols</span>(</span>
+<span id="cb72-21"><a href="#cb72-21" aria-hidden="true" tabindex="-1"></a>  growth <span class="sc">~</span> rd_lag1 <span class="sc">+</span> growth_lag1 <span class="sc">+</span> size_lag1 <span class="sc">|</span> icb_sector <span class="sc">+</span> country <span class="sc">+</span> year,</span>
+<span id="cb72-22"><a href="#cb72-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> panel_data2</span>
+<span id="cb72-23"><a href="#cb72-23" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb72-24"><a href="#cb72-24" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(ols_model_log)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>OLS estimation, Dep. Var.: growth
+Observations: 3,227
+Fixed-effects: icb_sector: 37,  country: 17,  year: 8
+Standard-errors: Clustered (icb_sector) 
+                Estimate  Std. Error   t value   Pr(&gt;|t|)    
+rd_lag1      0.007455416 0.005912447   1.26097 2.1543e-01    
+growth_lag1 -0.571002055 0.041078843 -13.90015 4.8403e-16 ***
+size_lag1   -0.000000796 0.000000438  -1.81569 7.7755e-02 .  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.441498     Adj. R2: 0.411414
+                 Within R2: 0.419909</code></pre>
+</div>
+</div>
 </section>
 <section id="ols-iv" class="level2">
 <h2 class="anchored" data-anchor-id="ols-iv">OLS-IV</h2>
+<p>1.R&amp;D intensity</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a>panel_data <span class="ot">&lt;-</span> panel_data <span class="sc">%&gt;%</span></span>
-<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(company) <span class="sc">%&gt;%</span></span>
-<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(year, <span class="at">.by_group =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">patent_lag1 =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(patent_count, <span class="at">order_by =</span> year)</span>
-<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
-<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a>iv_model <span class="ot">&lt;-</span> <span class="fu">feols</span>(</span>
-<span id="cb69-10"><a href="#cb69-10" aria-hidden="true" tabindex="-1"></a>  growth <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> growth_lag1 <span class="sc">+</span> size_lag1 <span class="sc">|</span> icb_sector <span class="sc">+</span> country <span class="sc">+</span> year <span class="sc">|</span> rd_lag1 <span class="sc">~</span> patent_lag1,</span>
-<span id="cb69-11"><a href="#cb69-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> panel_data</span>
-<span id="cb69-12"><a href="#cb69-12" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb69-13"><a href="#cb69-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb69-14"><a href="#cb69-14" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(iv_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb74"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a>panel_data <span class="ot">&lt;-</span> panel_data <span class="sc">%&gt;%</span></span>
+<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(company) <span class="sc">%&gt;%</span></span>
+<span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(year, <span class="at">.by_group =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb74-5"><a href="#cb74-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">patent_lag1 =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(patent_intensity_sales, <span class="at">order_by =</span> year)</span>
+<span id="cb74-6"><a href="#cb74-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb74-7"><a href="#cb74-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb74-8"><a href="#cb74-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb74-9"><a href="#cb74-9" aria-hidden="true" tabindex="-1"></a>iv_model <span class="ot">&lt;-</span> <span class="fu">feols</span>(</span>
+<span id="cb74-10"><a href="#cb74-10" aria-hidden="true" tabindex="-1"></a>  growth <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> growth_lag1 <span class="sc">+</span> size_lag1 <span class="sc">|</span> icb_sector <span class="sc">+</span> country <span class="sc">+</span> year <span class="sc">|</span> rd_lag1 <span class="sc">~</span> patent_lag1,</span>
+<span id="cb74-11"><a href="#cb74-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> panel_data</span>
+<span id="cb74-12"><a href="#cb74-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb74-13"><a href="#cb74-13" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(iv_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>TSLS estimation - Dep. Var.: growth
                   Endo.    : rd_lag1
@@ -1726,42 +1876,117 @@ Second stage: Dep. Var.: growth
 Observations: 3,227
 Fixed-effects: icb_sector: 37,  country: 17,  year: 8
 Standard-errors: Clustered (icb_sector) 
-                Estimate  Std. Error   t value Pr(&gt;|t|)    
-fit_rd_lag1  0.000154378 0.000219498  0.703324 0.486378    
-growth_lag1 -0.449003183 0.174977893 -2.566057 0.014594 *  
-size_lag1   -0.000000479 0.000000315 -1.520930 0.137013    
+                Estimate  Std. Error   t value   Pr(&gt;|t|)    
+fit_rd_lag1  0.000026596 0.000013741   1.93556 6.0806e-02 .  
+growth_lag1 -0.550267035 0.041183904 -13.36122 1.6045e-15 ***
+size_lag1   -0.000000547 0.000000320  -1.70815 9.6220e-02 .  
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-RMSE: 0.555909     Adj. R2: 0.066833
-                 Within R2: 0.080301
-F-test (1st stage), rd_lag1: stat = 0.101548, p = 0.750001, on 1 and 3,200 DoF.
-                 Wu-Hausman: stat = 0.061261, p = 0.80453 , on 1 and 3,163 DoF.</code></pre>
+RMSE: 0.438268     Adj. R2: 0.419995
+                 Within R2: 0.428366
+F-test (1st stage), rd_lag1: stat = 30,168.7, p &lt; 2.2e-16 , on 1 and 3,200 DoF.
+                 Wu-Hausman: stat =     26.5, p = 2.749e-7, on 1 and 3,163 DoF.</code></pre>
 </div>
 </div>
-<p>To address endogeneity concerns, I employed a two-stage least squares (2SLS) approach, using lagged patent counts as an instrumental variable for R&amp;D intensity. The results show that the predicted R&amp;D intensity has no significant effect on firm growth (p = 0.486), and the first-stage F-statistic is low (F = 0.10), indicating a weak instrument.</p>
+<p>The 2SLS regression addresses potential endogeneity in lagged R&amp;D intensity (rd_lag1) by using lagged patent intensity (patent_lag1) as an instrument. The first-stage F-statistic is very high (30,168.7, p &lt; 0.001), confirming that the instrument is highly relevant. The Wu-Hausman test rejects the null of exogeneity (p &lt; 0.001), justifying the need for instrumental variable estimation.</p>
+<p>In the second stage, the coefficient on fitted R&amp;D intensity (fit_rd_lag1) is 0.0000266, which remains positive and marginally significant (p = 0.0608). This suggests that a 1 percentage point increase in R&amp;D intensity leads to an estimated 0.00266% increase in firm sales growth.</p>
+<p>Lagged firm growth again shows a strong negative effect (–0.55), reinforcing the earlier finding of mean reversion, and firm size remains weakly negative and not statistically significant at conventional levels.</p>
+<p>Overall, the IV results provide additional support for a positive, though modest, causal effect of R&amp;D intensity on firm-level sales growth, and strengthen confidence in the interpretation of R&amp;D as a productive investment.</p>
+<p>2.R&amp;D growth</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a>panel_data1 <span class="ot">&lt;-</span> panel_data1 <span class="sc">%&gt;%</span></span>
+<span id="cb76-2"><a href="#cb76-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(company) <span class="sc">%&gt;%</span></span>
+<span id="cb76-3"><a href="#cb76-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(year, <span class="at">.by_group =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb76-4"><a href="#cb76-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb76-5"><a href="#cb76-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">patent_lag1 =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(patent_intensity_sales, <span class="at">order_by =</span> year)</span>
+<span id="cb76-6"><a href="#cb76-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb76-7"><a href="#cb76-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb76-8"><a href="#cb76-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb76-9"><a href="#cb76-9" aria-hidden="true" tabindex="-1"></a>iv_model_growth <span class="ot">&lt;-</span> <span class="fu">feols</span>(</span>
+<span id="cb76-10"><a href="#cb76-10" aria-hidden="true" tabindex="-1"></a>  growth <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> growth_lag1 <span class="sc">+</span> size_lag1 <span class="sc">|</span> icb_sector <span class="sc">+</span> country <span class="sc">+</span> year <span class="sc">|</span> rd_lag1 <span class="sc">~</span> patent_lag1,</span>
+<span id="cb76-11"><a href="#cb76-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> panel_data1</span>
+<span id="cb76-12"><a href="#cb76-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb76-13"><a href="#cb76-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb76-14"><a href="#cb76-14" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(iv_model_growth)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>TSLS estimation - Dep. Var.: growth
+                  Endo.    : rd_lag1
+                  Instr.   : patent_lag1
+Second stage: Dep. Var.: growth
+Observations: 3,227
+Fixed-effects: icb_sector: 37,  country: 17,  year: 8
+Standard-errors: Clustered (icb_sector) 
+               Estimate Std. Error   t value   Pr(&gt;|t|)    
+fit_rd_lag1  0.21447119 0.13527690  1.585424 0.12161631    
+growth_lag1 -0.65449460 0.14057914 -4.655702 0.00004281 ***
+size_lag1    0.00000471 0.00000701  0.671721 0.50604958    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 8.81752     Adj. R2: -233.8
+                Within R2: -230.4
+F-test (1st stage), rd_lag1: stat =  0.174703, p = 0.675994, on 1 and 3,200 DoF.
+                 Wu-Hausman: stat = 70.3     , p &lt; 2.2e-16 , on 1 and 3,163 DoF.</code></pre>
+</div>
+</div>
+<p>3.R&amp;D log level</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb78"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a>panel_data2 <span class="ot">&lt;-</span> panel_data2 <span class="sc">%&gt;%</span></span>
+<span id="cb78-2"><a href="#cb78-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">rd_log =</span> <span class="fu">log1p</span>(rd_million)) <span class="sc">%&gt;%</span></span>
+<span id="cb78-3"><a href="#cb78-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(company) <span class="sc">%&gt;%</span></span>
+<span id="cb78-4"><a href="#cb78-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(year, <span class="at">.by_group =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb78-5"><a href="#cb78-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb78-6"><a href="#cb78-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">patent_lag1 =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(patent_intensity_sales, <span class="at">order_by =</span> year)</span>
+<span id="cb78-7"><a href="#cb78-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb78-8"><a href="#cb78-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb78-9"><a href="#cb78-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb78-10"><a href="#cb78-10" aria-hidden="true" tabindex="-1"></a>iv_model_log <span class="ot">&lt;-</span> <span class="fu">feols</span>(</span>
+<span id="cb78-11"><a href="#cb78-11" aria-hidden="true" tabindex="-1"></a>  growth <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> growth_lag1 <span class="sc">+</span> size_lag1 <span class="sc">|</span> icb_sector <span class="sc">+</span> country <span class="sc">+</span> year <span class="sc">|</span> rd_lag1 <span class="sc">~</span> patent_lag1,</span>
+<span id="cb78-12"><a href="#cb78-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> panel_data2</span>
+<span id="cb78-13"><a href="#cb78-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb78-14"><a href="#cb78-14" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(iv_model_log)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>TSLS estimation - Dep. Var.: growth
+                  Endo.    : rd_lag1
+                  Instr.   : patent_lag1
+Second stage: Dep. Var.: growth
+Observations: 3,227
+Fixed-effects: icb_sector: 37,  country: 17,  year: 8
+Standard-errors: Clustered (icb_sector) 
+             Estimate Std. Error   t value   Pr(&gt;|t|)    
+fit_rd_lag1 -0.953622   0.217165  -4.39123 9.4842e-05 ***
+growth_lag1 -0.615082   0.041995 -14.64638  &lt; 2.2e-16 ***
+size_lag1    0.000029   0.000012   2.43084 2.0174e-02 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 1.16858     Adj. R2: -3.12352
+                Within R2: -3.06401
+F-test (1st stage), rd_lag1: stat = 11.8, p = 5.902e-4, on 1 and 3,200 DoF.
+                 Wu-Hausman: stat = 71.8, p &lt; 2.2e-16 , on 1 and 3,163 DoF.</code></pre>
+</div>
+</div>
 </section>
 <section id="gmm" class="level2">
 <h2 class="anchored" data-anchor-id="gmm">GMM</h2>
+<p>1.R&amp;D intensity</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(plm)</span>
-<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a>merged_data <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span></span>
-<span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">company =</span> <span class="fu">as.factor</span>(company),</span>
-<span id="cb71-5"><a href="#cb71-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> <span class="fu">as.integer</span>(year)</span>
-<span id="cb71-6"><a href="#cb71-6" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb71-7"><a href="#cb71-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb71-8"><a href="#cb71-8" aria-hidden="true" tabindex="-1"></a>pdata <span class="ot">&lt;-</span> <span class="fu">pdata.frame</span>(merged_data, <span class="at">index =</span> <span class="fu">c</span>(<span class="st">"company"</span>, <span class="st">"year"</span>))</span>
-<span id="cb71-9"><a href="#cb71-9" aria-hidden="true" tabindex="-1"></a>pdata <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(pdata)</span>
-<span id="cb71-10"><a href="#cb71-10" aria-hidden="true" tabindex="-1"></a>gmm_model <span class="ot">&lt;-</span> plm<span class="sc">::</span><span class="fu">pgmm</span>(</span>
-<span id="cb71-11"><a href="#cb71-11" aria-hidden="true" tabindex="-1"></a>  sales_growth_1y_percent <span class="sc">~</span> plm<span class="sc">::</span><span class="fu">lag</span>(sales_growth_1y_percent, <span class="dv">1</span>) <span class="sc">+</span> plm<span class="sc">::</span><span class="fu">lag</span>(sales_million, <span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>) <span class="sc">+</span> plm<span class="sc">::</span><span class="fu">lag</span>(rd_intensity_percent, <span class="dv">1</span>) <span class="sc">|</span></span>
-<span id="cb71-12"><a href="#cb71-12" aria-hidden="true" tabindex="-1"></a>    plm<span class="sc">::</span><span class="fu">lag</span>(sales_growth_1y_percent, <span class="dv">2</span><span class="sc">:</span><span class="dv">3</span>) <span class="sc">+</span> plm<span class="sc">::</span><span class="fu">lag</span>(rd_intensity_percent, <span class="dv">2</span><span class="sc">:</span><span class="dv">3</span>),</span>
-<span id="cb71-13"><a href="#cb71-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> pdata,</span>
-<span id="cb71-14"><a href="#cb71-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">effect =</span> <span class="st">"individual"</span>,</span>
-<span id="cb71-15"><a href="#cb71-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="st">"twosteps"</span>,</span>
-<span id="cb71-16"><a href="#cb71-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">transformation =</span> <span class="st">"ld"</span></span>
-<span id="cb71-17"><a href="#cb71-17" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb71-18"><a href="#cb71-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb71-19"><a href="#cb71-19" aria-hidden="true" tabindex="-1"></a>plm<span class="sc">:::</span><span class="fu">summary.pgmm</span>(gmm_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb80"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(plm)</span>
+<span id="cb80-2"><a href="#cb80-2" aria-hidden="true" tabindex="-1"></a>merged_data <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span></span>
+<span id="cb80-3"><a href="#cb80-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb80-4"><a href="#cb80-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">company =</span> <span class="fu">as.factor</span>(company),</span>
+<span id="cb80-5"><a href="#cb80-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> <span class="fu">as.integer</span>(year)</span>
+<span id="cb80-6"><a href="#cb80-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb80-7"><a href="#cb80-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb80-8"><a href="#cb80-8" aria-hidden="true" tabindex="-1"></a>pdata <span class="ot">&lt;-</span> <span class="fu">pdata.frame</span>(merged_data, <span class="at">index =</span> <span class="fu">c</span>(<span class="st">"company"</span>, <span class="st">"year"</span>))</span>
+<span id="cb80-9"><a href="#cb80-9" aria-hidden="true" tabindex="-1"></a>pdata <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(pdata)</span>
+<span id="cb80-10"><a href="#cb80-10" aria-hidden="true" tabindex="-1"></a>gmm_model <span class="ot">&lt;-</span> plm<span class="sc">::</span><span class="fu">pgmm</span>(</span>
+<span id="cb80-11"><a href="#cb80-11" aria-hidden="true" tabindex="-1"></a>  sales_growth_1y_percent <span class="sc">~</span> plm<span class="sc">::</span><span class="fu">lag</span>(sales_growth_1y_percent, <span class="dv">1</span>) <span class="sc">+</span> plm<span class="sc">::</span><span class="fu">lag</span>(sales_million, <span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>) <span class="sc">+</span> plm<span class="sc">::</span><span class="fu">lag</span>(rd_intensity_percent, <span class="dv">1</span>) <span class="sc">|</span></span>
+<span id="cb80-12"><a href="#cb80-12" aria-hidden="true" tabindex="-1"></a>    plm<span class="sc">::</span><span class="fu">lag</span>(sales_growth_1y_percent, <span class="dv">2</span><span class="sc">:</span><span class="dv">3</span>) <span class="sc">+</span> plm<span class="sc">::</span><span class="fu">lag</span>(rd_intensity_percent, <span class="dv">2</span><span class="sc">:</span><span class="dv">3</span>),</span>
+<span id="cb80-13"><a href="#cb80-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> pdata,</span>
+<span id="cb80-14"><a href="#cb80-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">effect =</span> <span class="st">"individual"</span>,</span>
+<span id="cb80-15"><a href="#cb80-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="st">"twosteps"</span>,</span>
+<span id="cb80-16"><a href="#cb80-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">transformation =</span> <span class="st">"ld"</span></span>
+<span id="cb80-17"><a href="#cb80-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb80-18"><a href="#cb80-18" aria-hidden="true" tabindex="-1"></a>plm<span class="sc">:::</span><span class="fu">summary.pgmm</span>(gmm_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Oneway (individual) effect Two-steps model System GMM 
 
@@ -1772,19 +1997,19 @@ plm::pgmm(formula = sales_growth_1y_percent ~ plm::lag(sales_growth_1y_percent,
     2:3), data = pdata, effect = "individual", model = "twosteps", 
     transformation = "ld")
 
-Balanced Panel: n = 417, T = 10, N = 4170
+Unbalanced Panel: n = 417, T = 8-10, N = 4164
 
-Number of Observations Used: 7089
+Number of Observations Used: 7062
 Residuals:
      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
--44472.65     -5.46      1.80     26.89      9.10  44594.22 
+-44479.88     -5.29      1.80     26.31      9.09  44594.21 
 
 Coefficients:
-                                        Estimate  Std. Error  z-value  Pr(&gt;|z|)
-plm::lag(sales_growth_1y_percent, 1) -2.8387e-03  2.9155e-04  -9.7366 &lt; 2.2e-16
-plm::lag(sales_million, 0:1)0        -7.3260e-04  3.9285e-05 -18.6485 &lt; 2.2e-16
-plm::lag(sales_million, 0:1)1         8.1749e-04  4.2895e-05  19.0581 &lt; 2.2e-16
-plm::lag(rd_intensity_percent, 1)     1.2893e-04  2.4163e-07 533.5972 &lt; 2.2e-16
+                                        Estimate  Std. Error z-value  Pr(&gt;|z|)
+plm::lag(sales_growth_1y_percent, 1) -2.6810e-03  2.6804e-04 -10.002 &lt; 2.2e-16
+plm::lag(sales_million, 0:1)0        -7.0414e-04  4.0706e-05 -17.298 &lt; 2.2e-16
+plm::lag(sales_million, 0:1)1         7.7735e-04  4.1135e-05  18.898 &lt; 2.2e-16
+plm::lag(rd_intensity_percent, 1)     1.3803e-04  2.1836e-07 632.136 &lt; 2.2e-16
                                         
 plm::lag(sales_growth_1y_percent, 1) ***
 plm::lag(sales_million, 0:1)0        ***
@@ -1793,45 +2018,168 @@ plm::lag(rd_intensity_percent, 1)    ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Sargan test: chisq(46) = 104.7745 (p-value = 1.77e-06)
+Sargan test: chisq(46) = 115.5025 (p-value = 6.6675e-08)
 Autocorrelation test (1): normal = NaN (p-value = NA)
-Autocorrelation test (2): normal = -0.06271496 (p-value = 0.94999)
-Wald test for coefficients: chisq(4) = 387984.5 (p-value = &lt; 2.22e-16)</code></pre>
+Autocorrelation test (2): normal = -0.08562178 (p-value = 0.93177)
+Wald test for coefficients: chisq(4) = 599962.9 (p-value = &lt; 2.22e-16)</code></pre>
 </div>
 </div>
-<p>Using a two-step System GMM model on a panel of 417 firms from 2010 to 2019, I find that lagged R&amp;D intensity has a significant and positive effect on firm sales growth. This indicates that prior R&amp;D investment contributes meaningfully to subsequent firm performance. The model also reveals a slight mean-reverting tendency in sales growth, along with mixed effects of firm size—current size negatively affects growth, while lagged size has a positive influence. The AR(2) test suggests no second-order autocorrelation, supporting the validity of the model specification.</p>
+<p>Using a System GMM model on a panel of 417 firms from 2010 to 2019, I found it examines the effect of R&amp;D intensity on firm-level sales growth, while addressing endogeneity and dynamic panel bias. The coefficient on lagged R&amp;D intensity is estimated at 0.000138 and is highly statistically significant (z = 632.1, p &lt; 0.001). This implies that a 1 percentage point increase in R&amp;D intensity is associated with a 0.0138% increase in one-year sales growth, all else equal. Though the magnitude appears small, this is consistent with the scale and units of R&amp;D intensity and the specification in levels.</p>
+<p>Lagged firm growth enters with a negative and highly significant coefficient (–0.00268), indicating mean reversion in growth. Meanwhile, current and lagged firm size are both significant, with signs suggesting that changes in size are positively related to future growth.</p>
+<p>Model diagnostics support the reliability of the GMM estimation: The Sargan test yields a p-value &lt; 0.001, indicating possible instrument proliferation, which is a known risk in GMM; however, The AR(2) test (p = 0.93) suggests no second-order autocorrelation, satisfying a critical assumption for GMM validity. The Wald test strongly rejects the null that coefficients are jointly zero (p &lt; 2.2e-16).</p>
+<p>Overall, the results confirm that R&amp;D intensity has a positive and statistically robust causal effect on firm growth, even when controlling for firm dynamics and unobserved heterogeneity. The GMM framework strengthens this interpretation by mitigating simultaneity and measurement error concerns that may bias OLS estimates.</p>
+<p>2.R&amp;D growth</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb82"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a>gmm_model_growth <span class="ot">&lt;-</span> plm<span class="sc">::</span><span class="fu">pgmm</span>(</span>
+<span id="cb82-2"><a href="#cb82-2" aria-hidden="true" tabindex="-1"></a>  sales_growth_1y_percent <span class="sc">~</span> </span>
+<span id="cb82-3"><a href="#cb82-3" aria-hidden="true" tabindex="-1"></a>    plm<span class="sc">::</span><span class="fu">lag</span>(sales_growth_1y_percent, <span class="dv">1</span>) <span class="sc">+</span> </span>
+<span id="cb82-4"><a href="#cb82-4" aria-hidden="true" tabindex="-1"></a>    plm<span class="sc">::</span><span class="fu">lag</span>(sales_million, <span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>) <span class="sc">+</span> </span>
+<span id="cb82-5"><a href="#cb82-5" aria-hidden="true" tabindex="-1"></a>    plm<span class="sc">::</span><span class="fu">lag</span>(rd_growth_1y_percent, <span class="dv">1</span>) <span class="sc">|</span></span>
+<span id="cb82-6"><a href="#cb82-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb82-7"><a href="#cb82-7" aria-hidden="true" tabindex="-1"></a>    plm<span class="sc">::</span><span class="fu">lag</span>(sales_growth_1y_percent, <span class="dv">2</span><span class="sc">:</span><span class="dv">3</span>) <span class="sc">+</span> </span>
+<span id="cb82-8"><a href="#cb82-8" aria-hidden="true" tabindex="-1"></a>    plm<span class="sc">::</span><span class="fu">lag</span>(rd_growth_1y_percent, <span class="dv">2</span><span class="sc">:</span><span class="dv">3</span>),</span>
+<span id="cb82-9"><a href="#cb82-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb82-10"><a href="#cb82-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> pdata,</span>
+<span id="cb82-11"><a href="#cb82-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">effect =</span> <span class="st">"individual"</span>,</span>
+<span id="cb82-12"><a href="#cb82-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="st">"twosteps"</span>,</span>
+<span id="cb82-13"><a href="#cb82-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">transformation =</span> <span class="st">"ld"</span></span>
+<span id="cb82-14"><a href="#cb82-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb82-15"><a href="#cb82-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb82-16"><a href="#cb82-16" aria-hidden="true" tabindex="-1"></a>plm<span class="sc">:::</span><span class="fu">summary.pgmm</span>(gmm_model_growth)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Oneway (individual) effect Two-steps model System GMM 
+
+Call:
+plm::pgmm(formula = sales_growth_1y_percent ~ plm::lag(sales_growth_1y_percent, 
+    1) + plm::lag(sales_million, 0:1) + plm::lag(rd_growth_1y_percent, 
+    1) | plm::lag(sales_growth_1y_percent, 2:3) + plm::lag(rd_growth_1y_percent, 
+    2:3), data = pdata, effect = "individual", model = "twosteps", 
+    transformation = "ld")
+
+Unbalanced Panel: n = 417, T = 8-10, N = 4164
+
+Number of Observations Used: 7062
+Residuals:
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+-44491.30     -5.83      2.09     26.98     10.03  44594.09 
+
+Coefficients:
+                                        Estimate  Std. Error z-value  Pr(&gt;|z|)
+plm::lag(sales_growth_1y_percent, 1) -2.4482e-03  2.7411e-04 -8.9315 &lt; 2.2e-16
+plm::lag(sales_million, 0:1)0        -5.7360e-04  9.0027e-05 -6.3714 1.873e-10
+plm::lag(sales_million, 0:1)1         6.9217e-04  8.6400e-05  8.0113 1.135e-15
+plm::lag(rd_growth_1y_percent, 1)    -1.2182e-01  1.6769e-01 -0.7264    0.4676
+                                        
+plm::lag(sales_growth_1y_percent, 1) ***
+plm::lag(sales_million, 0:1)0        ***
+plm::lag(sales_million, 0:1)1        ***
+plm::lag(rd_growth_1y_percent, 1)       
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Sargan test: chisq(46) = 111.4963 (p-value = 2.3203e-07)
+Autocorrelation test (1): normal = -1.281007 (p-value = 0.20019)
+Autocorrelation test (2): normal = -0.6271452 (p-value = 0.53056)
+Wald test for coefficients: chisq(4) = 169.6522 (p-value = &lt; 2.22e-16)</code></pre>
+</div>
+</div>
+<p>3.R&amp;D log level</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb84"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a>merged_data <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span></span>
+<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb84-3"><a href="#cb84-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">rd_log =</span> <span class="fu">log1p</span>(rd_million),</span>
+<span id="cb84-4"><a href="#cb84-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">company =</span> <span class="fu">as.factor</span>(company),</span>
+<span id="cb84-5"><a href="#cb84-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> <span class="fu">as.integer</span>(year)</span>
+<span id="cb84-6"><a href="#cb84-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb84-7"><a href="#cb84-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb84-8"><a href="#cb84-8" aria-hidden="true" tabindex="-1"></a>pdata <span class="ot">&lt;-</span> <span class="fu">pdata.frame</span>(merged_data, <span class="at">index =</span> <span class="fu">c</span>(<span class="st">"company"</span>, <span class="st">"year"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb84-9"><a href="#cb84-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">na.omit</span>()</span>
+<span id="cb84-10"><a href="#cb84-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb84-11"><a href="#cb84-11" aria-hidden="true" tabindex="-1"></a>gmm_model_log <span class="ot">&lt;-</span> plm<span class="sc">::</span><span class="fu">pgmm</span>(</span>
+<span id="cb84-12"><a href="#cb84-12" aria-hidden="true" tabindex="-1"></a>  sales_growth_1y_percent <span class="sc">~</span> </span>
+<span id="cb84-13"><a href="#cb84-13" aria-hidden="true" tabindex="-1"></a>    plm<span class="sc">::</span><span class="fu">lag</span>(sales_growth_1y_percent, <span class="dv">1</span>) <span class="sc">+</span> </span>
+<span id="cb84-14"><a href="#cb84-14" aria-hidden="true" tabindex="-1"></a>    plm<span class="sc">::</span><span class="fu">lag</span>(sales_million, <span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>) <span class="sc">+</span> </span>
+<span id="cb84-15"><a href="#cb84-15" aria-hidden="true" tabindex="-1"></a>    plm<span class="sc">::</span><span class="fu">lag</span>(rd_log, <span class="dv">1</span>) <span class="sc">|</span></span>
+<span id="cb84-16"><a href="#cb84-16" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb84-17"><a href="#cb84-17" aria-hidden="true" tabindex="-1"></a>    plm<span class="sc">::</span><span class="fu">lag</span>(sales_growth_1y_percent, <span class="dv">2</span><span class="sc">:</span><span class="dv">3</span>) <span class="sc">+</span> </span>
+<span id="cb84-18"><a href="#cb84-18" aria-hidden="true" tabindex="-1"></a>    plm<span class="sc">::</span><span class="fu">lag</span>(rd_log, <span class="dv">2</span><span class="sc">:</span><span class="dv">3</span>),</span>
+<span id="cb84-19"><a href="#cb84-19" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb84-20"><a href="#cb84-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> pdata,</span>
+<span id="cb84-21"><a href="#cb84-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">effect =</span> <span class="st">"individual"</span>,</span>
+<span id="cb84-22"><a href="#cb84-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="st">"twosteps"</span>,</span>
+<span id="cb84-23"><a href="#cb84-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">transformation =</span> <span class="st">"ld"</span></span>
+<span id="cb84-24"><a href="#cb84-24" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb84-25"><a href="#cb84-25" aria-hidden="true" tabindex="-1"></a>plm<span class="sc">:::</span><span class="fu">summary.pgmm</span>(gmm_model_log)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Oneway (individual) effect Two-steps model System GMM 
+
+Call:
+plm::pgmm(formula = sales_growth_1y_percent ~ plm::lag(sales_growth_1y_percent, 
+    1) + plm::lag(sales_million, 0:1) + plm::lag(rd_log, 1) | 
+    plm::lag(sales_growth_1y_percent, 2:3) + plm::lag(rd_log, 
+        2:3), data = pdata, effect = "individual", model = "twosteps", 
+    transformation = "ld")
+
+Unbalanced Panel: n = 417, T = 8-10, N = 4164
+
+Number of Observations Used: 7062
+Residuals:
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+-44440.61    -50.04    -22.53      0.66     -0.20  44588.57 
+
+Coefficients:
+                                        Estimate  Std. Error  z-value Pr(&gt;|z|)
+plm::lag(sales_growth_1y_percent, 1) -3.5670e-03  1.4147e-04 -25.2139  &lt; 2e-16
+plm::lag(sales_million, 0:1)0        -1.2207e-03  9.8819e-05 -12.3525  &lt; 2e-16
+plm::lag(sales_million, 0:1)1         1.5709e-04  7.6234e-05   2.0606  0.03934
+plm::lag(rd_log, 1)                   1.4184e+01  1.6267e+00   8.7195  &lt; 2e-16
+                                        
+plm::lag(sales_growth_1y_percent, 1) ***
+plm::lag(sales_million, 0:1)0        ***
+plm::lag(sales_million, 0:1)1        *  
+plm::lag(rd_log, 1)                  ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Sargan test: chisq(46) = 232.0377 (p-value = &lt; 2.22e-16)
+Autocorrelation test (1): normal = -1.278184 (p-value = 0.20118)
+Autocorrelation test (2): normal = -0.9136261 (p-value = 0.36091)
+Wald test for coefficients: chisq(4) = 1352.695 (p-value = &lt; 2.22e-16)</code></pre>
+</div>
+</div>
 </section>
 <section id="lp-ols" class="level2">
 <h2 class="anchored" data-anchor-id="lp-ols">LP-OLS</h2>
+<p>1.R&amp;D intensity</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a>merged_data1 <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span></span>
-<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">company =</span> <span class="fu">as.factor</span>(company),</span>
-<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> <span class="fu">as.factor</span>(year),</span>
-<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">country =</span> <span class="fu">as.factor</span>(country),</span>
-<span id="cb73-6"><a href="#cb73-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">icb_sector =</span> <span class="fu">as.factor</span>(icb_sector)</span>
-<span id="cb73-7"><a href="#cb73-7" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb73-8"><a href="#cb73-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb73-9"><a href="#cb73-9" aria-hidden="true" tabindex="-1"></a>contemp_data <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> sales_million <span class="sc">+</span> year <span class="sc">+</span> country <span class="sc">+</span> icb_sector, <span class="at">data =</span> merged_data1)[, <span class="sc">-</span><span class="dv">1</span>]</span>
-<span id="cb73-10"><a href="#cb73-10" aria-hidden="true" tabindex="-1"></a>contemp_data <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(contemp_data)</span>
-<span id="cb73-11"><a href="#cb73-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb73-12"><a href="#cb73-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb73-13"><a href="#cb73-13" aria-hidden="true" tabindex="-1"></a>endog_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb73-14"><a href="#cb73-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">sales_growth_1y_percent =</span> merged_data<span class="sc">$</span>sales_growth_1y_percent,</span>
-<span id="cb73-15"><a href="#cb73-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">rd_intensity_percent =</span> merged_data<span class="sc">$</span>rd_intensity_percent</span>
-<span id="cb73-16"><a href="#cb73-16" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb73-17"><a href="#cb73-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb73-18"><a href="#cb73-18" aria-hidden="true" tabindex="-1"></a>results_lp <span class="ot">&lt;-</span> <span class="fu">lp_lin</span>(</span>
-<span id="cb73-19"><a href="#cb73-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">endog_data    =</span> endog_data,</span>
-<span id="cb73-20"><a href="#cb73-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">lags_endog_lin =</span> <span class="dv">0</span>,</span>
-<span id="cb73-21"><a href="#cb73-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">shock_type     =</span> <span class="dv">1</span>,</span>
-<span id="cb73-22"><a href="#cb73-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">trend          =</span> <span class="dv">0</span>,</span>
-<span id="cb73-23"><a href="#cb73-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">confint        =</span> <span class="fl">1.96</span>,</span>
-<span id="cb73-24"><a href="#cb73-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">hor            =</span> <span class="dv">5</span>,</span>
-<span id="cb73-25"><a href="#cb73-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">contemp_data   =</span> contemp_data  </span>
-<span id="cb73-26"><a href="#cb73-26" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb73-27"><a href="#cb73-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb73-28"><a href="#cb73-28" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(results_lp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb86"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a>merged_data1 <span class="ot">&lt;-</span> merged_data <span class="sc">%&gt;%</span></span>
+<span id="cb86-2"><a href="#cb86-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb86-3"><a href="#cb86-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">company =</span> <span class="fu">as.factor</span>(company),</span>
+<span id="cb86-4"><a href="#cb86-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> <span class="fu">as.factor</span>(year),</span>
+<span id="cb86-5"><a href="#cb86-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">country =</span> <span class="fu">as.factor</span>(country),</span>
+<span id="cb86-6"><a href="#cb86-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">icb_sector =</span> <span class="fu">as.factor</span>(icb_sector)</span>
+<span id="cb86-7"><a href="#cb86-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb86-8"><a href="#cb86-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-9"><a href="#cb86-9" aria-hidden="true" tabindex="-1"></a>contemp_data <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> sales_million <span class="sc">+</span> year <span class="sc">+</span> country <span class="sc">+</span> icb_sector, <span class="at">data =</span> merged_data1)[, <span class="sc">-</span><span class="dv">1</span>]</span>
+<span id="cb86-10"><a href="#cb86-10" aria-hidden="true" tabindex="-1"></a>contemp_data <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(contemp_data)</span>
+<span id="cb86-11"><a href="#cb86-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-12"><a href="#cb86-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-13"><a href="#cb86-13" aria-hidden="true" tabindex="-1"></a>endog_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb86-14"><a href="#cb86-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">sales_growth_1y_percent =</span> merged_data<span class="sc">$</span>sales_growth_1y_percent,</span>
+<span id="cb86-15"><a href="#cb86-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">rd_intensity_percent =</span> merged_data<span class="sc">$</span>rd_intensity_percent</span>
+<span id="cb86-16"><a href="#cb86-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb86-17"><a href="#cb86-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-18"><a href="#cb86-18" aria-hidden="true" tabindex="-1"></a>results_lp <span class="ot">&lt;-</span> <span class="fu">lp_lin</span>(</span>
+<span id="cb86-19"><a href="#cb86-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">endog_data    =</span> endog_data,</span>
+<span id="cb86-20"><a href="#cb86-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">lags_endog_lin =</span> <span class="dv">0</span>,</span>
+<span id="cb86-21"><a href="#cb86-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">shock_type     =</span> <span class="dv">1</span>,</span>
+<span id="cb86-22"><a href="#cb86-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">trend          =</span> <span class="dv">0</span>,</span>
+<span id="cb86-23"><a href="#cb86-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">confint        =</span> <span class="fl">1.96</span>,</span>
+<span id="cb86-24"><a href="#cb86-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">hor            =</span> <span class="dv">5</span>,</span>
+<span id="cb86-25"><a href="#cb86-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">contemp_data   =</span> contemp_data  </span>
+<span id="cb86-26"><a href="#cb86-26" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb86-27"><a href="#cb86-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-28"><a href="#cb86-28" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(results_lp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$`Shock: sales_growth_1y_percent`
 $`Shock: sales_growth_1y_percent`[[1]]
@@ -1841,23 +2189,23 @@ h1:rd_intensity_percent    0.029692270  0.014564452 1.9627596 8.653599e-06
 
 $`Shock: sales_growth_1y_percent`[[2]]
                                R-sqrd. Adj. R-sqrd.    F-stat      p-value
-h2:sales_growth_1y_percent 0.008372136 -0.007091847 0.5413958 9.989390e-01
-h2:rd_intensity_percent    0.027556525  0.012391714 1.8171361 8.437411e-05
+h2:sales_growth_1y_percent 0.008368945 -0.007095087 0.5411878 9.989453e-01
+h2:rd_intensity_percent    0.028463697  0.013313033 1.8787096 3.284643e-05
 
 $`Shock: sales_growth_1y_percent`[[3]]
                                R-sqrd. Adj. R-sqrd.    F-stat      p-value
-h3:sales_growth_1y_percent 0.008273078 -0.007196218 0.5348064 9.991240e-01
-h3:rd_intensity_percent    0.027537186  0.012368377 1.8153823 8.663783e-05
+h3:sales_growth_1y_percent 0.008244313 -0.007225432 0.5329314 0.9991711451
+h3:rd_intensity_percent    0.028481933  0.013327861 1.8794904 0.0000324513
 
 $`Shock: sales_growth_1y_percent`[[4]]
                                R-sqrd. Adj. R-sqrd.    F-stat      p-value
-h4:sales_growth_1y_percent 0.008172928 -0.007301702 0.5281501 9.992815e-01
-h4:rd_intensity_percent    0.028695162  0.013540723 1.8935153 2.606894e-05
+h4:sales_growth_1y_percent 0.008226306 -0.007247492 0.5316281 9.992026e-01
+h4:rd_intensity_percent    0.029911108  0.014775640 1.9762262 6.957161e-06
 
 $`Shock: sales_growth_1y_percent`[[5]]
                                R-sqrd. Adj. R-sqrd.    F-stat      p-value
-h5:sales_growth_1y_percent 0.006903651 -0.008594561 0.4454482 9.999614e-01
-h5:rd_intensity_percent    0.034398397  0.019329267 2.2827062 3.553945e-08
+h5:sales_growth_1y_percent 0.007107597 -0.008387432 0.4587017 9.999342e-01
+h5:rd_intensity_percent    0.035902324  0.020856664 2.3862246 5.321604e-09
 
 
 $`Shock: rd_intensity_percent`
@@ -1868,66 +2216,378 @@ h1:rd_intensity_percent    0.029692270  0.014564452 1.9627596 8.653599e-06
 
 $`Shock: rd_intensity_percent`[[2]]
                                R-sqrd. Adj. R-sqrd.    F-stat      p-value
-h2:sales_growth_1y_percent 0.008372136 -0.007091847 0.5413958 9.989390e-01
-h2:rd_intensity_percent    0.027556525  0.012391714 1.8171361 8.437411e-05
+h2:sales_growth_1y_percent 0.008368945 -0.007095087 0.5411878 9.989453e-01
+h2:rd_intensity_percent    0.028463697  0.013313033 1.8787096 3.284643e-05
 
 $`Shock: rd_intensity_percent`[[3]]
                                R-sqrd. Adj. R-sqrd.    F-stat      p-value
-h3:sales_growth_1y_percent 0.008273078 -0.007196218 0.5348064 9.991240e-01
-h3:rd_intensity_percent    0.027537186  0.012368377 1.8153823 8.663783e-05
+h3:sales_growth_1y_percent 0.008244313 -0.007225432 0.5329314 0.9991711451
+h3:rd_intensity_percent    0.028481933  0.013327861 1.8794904 0.0000324513
 
 $`Shock: rd_intensity_percent`[[4]]
                                R-sqrd. Adj. R-sqrd.    F-stat      p-value
-h4:sales_growth_1y_percent 0.008172928 -0.007301702 0.5281501 9.992815e-01
-h4:rd_intensity_percent    0.028695162  0.013540723 1.8935153 2.606894e-05
+h4:sales_growth_1y_percent 0.008226306 -0.007247492 0.5316281 9.992026e-01
+h4:rd_intensity_percent    0.029911108  0.014775640 1.9762262 6.957161e-06
 
 $`Shock: rd_intensity_percent`[[5]]
                                R-sqrd. Adj. R-sqrd.    F-stat      p-value
-h5:sales_growth_1y_percent 0.006903651 -0.008594561 0.4454482 9.999614e-01
-h5:rd_intensity_percent    0.034398397  0.019329267 2.2827062 3.553945e-08</code></pre>
+h5:sales_growth_1y_percent 0.007107597 -0.008387432 0.4587017 9.999342e-01
+h5:rd_intensity_percent    0.035902324  0.020856664 2.3862246 5.321604e-09</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(results_lp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb88"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(results_lp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="merged_data_EU_files/figure-html/unnamed-chunk-48-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="merged_data_EU_files/figure-html/unnamed-chunk-57-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>The result examines the dynamic relationship between R&amp;D intensity and sales growth using local projection models. Results show R&amp;D spending significantly boosts sales growth over 5 periods (all p-values &lt;0.01), with effects peaking in period 5 (p=3.55e-08), suggesting cumulative benefits. Conversely, sales growth shows no significant impact on R&amp;D decisions (all p-values &gt;0.9). This confirms R&amp;D as a key driver of future sales growth, without reverse causality.</p>
+<p>TUsing the local projection method (Jordà, 2005), we estimate the dynamic effects between R&amp;D intensity and sales growth over a 5-year horizon. The results show that a one-percentage-point shock to R&amp;D intensity leads to a persistent and statistically significant increase in firm growth from year 1 to year 5, with p-values &lt; 0.001 and the largest F-statistic reaching 2.39 at horizon 5. The effect peaks around year 3–5, indicating that innovation efforts have cumulative returns over time.</p>
+<p>In contrast, sales growth does not significantly predict future R&amp;D intensity across all horizons: all corresponding p-values are approximately 1.0, and the impulse response functions are flat and centered around zero. This asymmetry suggests a directional relationship—R&amp;D drives growth, but not the other way around—helping to address concerns about reverse causality.</p>
+<p>2.R&amp;D growth</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb89"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a>endog_data_growth <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb89-2"><a href="#cb89-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">sales_growth_1y_percent =</span> merged_data<span class="sc">$</span>sales_growth_1y_percent,</span>
+<span id="cb89-3"><a href="#cb89-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">rd_growth_1y_percent =</span> merged_data<span class="sc">$</span>rd_growth_1y_percent</span>
+<span id="cb89-4"><a href="#cb89-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb89-5"><a href="#cb89-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-6"><a href="#cb89-6" aria-hidden="true" tabindex="-1"></a>results_lp_growth <span class="ot">&lt;-</span> <span class="fu">lp_lin</span>(</span>
+<span id="cb89-7"><a href="#cb89-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">endog_data     =</span> endog_data_growth,</span>
+<span id="cb89-8"><a href="#cb89-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">lags_endog_lin =</span> <span class="dv">0</span>,</span>
+<span id="cb89-9"><a href="#cb89-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">shock_type     =</span> <span class="dv">1</span>,</span>
+<span id="cb89-10"><a href="#cb89-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">trend          =</span> <span class="dv">0</span>,</span>
+<span id="cb89-11"><a href="#cb89-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">confint        =</span> <span class="fl">1.96</span>,</span>
+<span id="cb89-12"><a href="#cb89-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">hor            =</span> <span class="dv">5</span>,</span>
+<span id="cb89-13"><a href="#cb89-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">contemp_data   =</span> contemp_data</span>
+<span id="cb89-14"><a href="#cb89-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb89-15"><a href="#cb89-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-16"><a href="#cb89-16" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(results_lp_growth)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$`Shock: sales_growth_1y_percent`
+$`Shock: sales_growth_1y_percent`[[1]]
+                               R-sqrd. Adj. R-sqrd.    F-stat     p-value
+h1:sales_growth_1y_percent 0.008400502 -0.007059271 0.5433781 0.998877080
+h1:rd_growth_1y_percent    0.024595621  0.009388342 1.6173584 0.001443337
+
+$`Shock: sales_growth_1y_percent`[[2]]
+                               R-sqrd. Adj. R-sqrd.    F-stat    p-value
+h2:sales_growth_1y_percent 0.008368945 -0.007095087 0.5411878 0.99894531
+h2:rd_growth_1y_percent    0.021850627  0.006596836 1.4324719 0.01401626
+
+$`Shock: sales_growth_1y_percent`[[3]]
+                               R-sqrd. Adj. R-sqrd.    F-stat     p-value
+h3:sales_growth_1y_percent 0.008244313 -0.007225432 0.5329314 0.999171145
+h3:rd_growth_1y_percent    0.023222019  0.007985901 1.5241428 0.004760675
+
+$`Shock: sales_growth_1y_percent`[[4]]
+                               R-sqrd. Adj. R-sqrd.    F-stat    p-value
+h4:sales_growth_1y_percent 0.008226306 -0.007247492 0.5316281 0.99920261
+h4:rd_growth_1y_percent    0.023073510  0.007831361 1.5137964 0.00540388
+
+$`Shock: sales_growth_1y_percent`[[5]]
+                               R-sqrd. Adj. R-sqrd.    F-stat      p-value
+h5:sales_growth_1y_percent 0.007107597 -0.008387432 0.4587017 0.9999342295
+h5:rd_growth_1y_percent    0.025934825  0.010733613 1.7061024 0.0004274709
+
+
+$`Shock: rd_growth_1y_percent`
+$`Shock: rd_growth_1y_percent`[[1]]
+                               R-sqrd. Adj. R-sqrd.    F-stat     p-value
+h1:sales_growth_1y_percent 0.008400502 -0.007059271 0.5433781 0.998877080
+h1:rd_growth_1y_percent    0.024595621  0.009388342 1.6173584 0.001443337
+
+$`Shock: rd_growth_1y_percent`[[2]]
+                               R-sqrd. Adj. R-sqrd.    F-stat    p-value
+h2:sales_growth_1y_percent 0.008368945 -0.007095087 0.5411878 0.99894531
+h2:rd_growth_1y_percent    0.021850627  0.006596836 1.4324719 0.01401626
+
+$`Shock: rd_growth_1y_percent`[[3]]
+                               R-sqrd. Adj. R-sqrd.    F-stat     p-value
+h3:sales_growth_1y_percent 0.008244313 -0.007225432 0.5329314 0.999171145
+h3:rd_growth_1y_percent    0.023222019  0.007985901 1.5241428 0.004760675
+
+$`Shock: rd_growth_1y_percent`[[4]]
+                               R-sqrd. Adj. R-sqrd.    F-stat    p-value
+h4:sales_growth_1y_percent 0.008226306 -0.007247492 0.5316281 0.99920261
+h4:rd_growth_1y_percent    0.023073510  0.007831361 1.5137964 0.00540388
+
+$`Shock: rd_growth_1y_percent`[[5]]
+                               R-sqrd. Adj. R-sqrd.    F-stat      p-value
+h5:sales_growth_1y_percent 0.007107597 -0.008387432 0.4587017 0.9999342295
+h5:rd_growth_1y_percent    0.025934825  0.010733613 1.7061024 0.0004274709</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb91"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(results_lp_growth)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="merged_data_EU_files/figure-html/unnamed-chunk-58-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>3.R&amp;D log level</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb92"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb92-1"><a href="#cb92-1" aria-hidden="true" tabindex="-1"></a>endog_data_log <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb92-2"><a href="#cb92-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">sales_growth_1y_percent =</span> merged_data<span class="sc">$</span>sales_growth_1y_percent,</span>
+<span id="cb92-3"><a href="#cb92-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">rd_log =</span> merged_data<span class="sc">$</span>rd_log</span>
+<span id="cb92-4"><a href="#cb92-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb92-5"><a href="#cb92-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb92-6"><a href="#cb92-6" aria-hidden="true" tabindex="-1"></a>results_lp_log <span class="ot">&lt;-</span> <span class="fu">lp_lin</span>(</span>
+<span id="cb92-7"><a href="#cb92-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">endog_data     =</span> endog_data_log,</span>
+<span id="cb92-8"><a href="#cb92-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">lags_endog_lin =</span> <span class="dv">0</span>,</span>
+<span id="cb92-9"><a href="#cb92-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">shock_type     =</span> <span class="dv">1</span>,</span>
+<span id="cb92-10"><a href="#cb92-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">trend          =</span> <span class="dv">0</span>,</span>
+<span id="cb92-11"><a href="#cb92-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">confint        =</span> <span class="fl">1.96</span>,</span>
+<span id="cb92-12"><a href="#cb92-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">hor            =</span> <span class="dv">5</span>,</span>
+<span id="cb92-13"><a href="#cb92-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">contemp_data   =</span> contemp_data</span>
+<span id="cb92-14"><a href="#cb92-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb92-15"><a href="#cb92-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb92-16"><a href="#cb92-16" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(results_lp_log)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$`Shock: sales_growth_1y_percent`
+$`Shock: sales_growth_1y_percent`[[1]]
+                               R-sqrd. Adj. R-sqrd.     F-stat   p-value
+h1:sales_growth_1y_percent 0.008400502 -0.007059271  0.5433781 0.9988771
+h1:rd_log                  0.401534416  0.392203893 43.0345020 0.0000000
+
+$`Shock: sales_growth_1y_percent`[[2]]
+                               R-sqrd. Adj. R-sqrd.     F-stat       p-value
+h2:sales_growth_1y_percent 0.008368945 -0.007095087  0.5411878  9.989453e-01
+h2:rd_log                  0.328529212  0.318057933 31.3743146 8.994353e-302
+
+$`Shock: sales_growth_1y_percent`[[3]]
+                               R-sqrd. Adj. R-sqrd.     F-stat       p-value
+h3:sales_growth_1y_percent 0.008244313 -0.007225432  0.5329314  9.991711e-01
+h3:rd_log                  0.265149774  0.253687329 23.1320421 3.291086e-224
+
+$`Shock: sales_growth_1y_percent`[[4]]
+                               R-sqrd. Adj. R-sqrd.     F-stat       p-value
+h4:sales_growth_1y_percent 0.008226306 -0.007247492  0.5316281  9.992026e-01
+h4:rd_log                  0.213783227  0.201516559 17.4279781 7.441022e-167
+
+$`Shock: sales_growth_1y_percent`[[5]]
+                               R-sqrd. Adj. R-sqrd.     F-stat       p-value
+h5:sales_growth_1y_percent 0.007107597 -0.008387432  0.4587017  9.999342e-01
+h5:rd_log                  0.173386411  0.160486320 13.4407131 5.343949e-125
+
+
+$`Shock: rd_log`
+$`Shock: rd_log`[[1]]
+                               R-sqrd. Adj. R-sqrd.     F-stat   p-value
+h1:sales_growth_1y_percent 0.008400502 -0.007059271  0.5433781 0.9988771
+h1:rd_log                  0.401534416  0.392203893 43.0345020 0.0000000
+
+$`Shock: rd_log`[[2]]
+                               R-sqrd. Adj. R-sqrd.     F-stat       p-value
+h2:sales_growth_1y_percent 0.008368945 -0.007095087  0.5411878  9.989453e-01
+h2:rd_log                  0.328529212  0.318057933 31.3743146 8.994353e-302
+
+$`Shock: rd_log`[[3]]
+                               R-sqrd. Adj. R-sqrd.     F-stat       p-value
+h3:sales_growth_1y_percent 0.008244313 -0.007225432  0.5329314  9.991711e-01
+h3:rd_log                  0.265149774  0.253687329 23.1320421 3.291086e-224
+
+$`Shock: rd_log`[[4]]
+                               R-sqrd. Adj. R-sqrd.     F-stat       p-value
+h4:sales_growth_1y_percent 0.008226306 -0.007247492  0.5316281  9.992026e-01
+h4:rd_log                  0.213783227  0.201516559 17.4279781 7.441022e-167
+
+$`Shock: rd_log`[[5]]
+                               R-sqrd. Adj. R-sqrd.     F-stat       p-value
+h5:sales_growth_1y_percent 0.007107597 -0.008387432  0.4587017  9.999342e-01
+h5:rd_log                  0.173386411  0.160486320 13.4407131 5.343949e-125</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb94"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb94-1"><a href="#cb94-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(results_lp_log)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="merged_data_EU_files/figure-html/unnamed-chunk-59-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
 </section>
 <section id="lp-2sls" class="level2">
 <h2 class="anchored" data-anchor-id="lp-2sls">LP-2SLS</h2>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a><span class="co">#endog_data &lt;- data.frame(</span></span>
-<span id="cb76-2"><a href="#cb76-2" aria-hidden="true" tabindex="-1"></a><span class="co">#  sales_growth_1y_percent = merged_data1$sales_growth_1y_percent,</span></span>
-<span id="cb76-3"><a href="#cb76-3" aria-hidden="true" tabindex="-1"></a><span class="co"># rd_intensity_percent = merged_data1$rd_intensity_percent)</span></span>
-<span id="cb76-4"><a href="#cb76-4" aria-hidden="true" tabindex="-1"></a><span class="co"># shock_var &lt;- endog_data$rd_intensity_percent</span></span>
-<span id="cb76-5"><a href="#cb76-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb76-6"><a href="#cb76-6" aria-hidden="true" tabindex="-1"></a><span class="co"># instrum_var &lt;- data.frame(patent_count = as.numeric(merged_data1$patent_count))</span></span>
-<span id="cb76-7"><a href="#cb76-7" aria-hidden="true" tabindex="-1"></a><span class="co"># instrum_var &lt;- data.frame(patent = as.numeric(merged_data1$patent_count + 0))</span></span>
-<span id="cb76-8"><a href="#cb76-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb76-9"><a href="#cb76-9" aria-hidden="true" tabindex="-1"></a><span class="co"># contemp_data &lt;- model.matrix(~ sales_million + year + country + icb_sector, data = merged_data1)[, -1]</span></span>
-<span id="cb76-10"><a href="#cb76-10" aria-hidden="true" tabindex="-1"></a><span class="co"># contemp_data &lt;- as.data.frame(contemp_data)</span></span>
-<span id="cb76-11"><a href="#cb76-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb76-12"><a href="#cb76-12" aria-hidden="true" tabindex="-1"></a><span class="co"># results_lp_iv &lt;- lp_lin_iv(</span></span>
-<span id="cb76-13"><a href="#cb76-13" aria-hidden="true" tabindex="-1"></a><span class="co">#  endog_data      = endog_data,</span></span>
-<span id="cb76-14"><a href="#cb76-14" aria-hidden="true" tabindex="-1"></a><span class="co">#  lags_endog_lin  = 0,</span></span>
-<span id="cb76-15"><a href="#cb76-15" aria-hidden="true" tabindex="-1"></a><span class="co">#  shock           = shock_var,</span></span>
-<span id="cb76-16"><a href="#cb76-16" aria-hidden="true" tabindex="-1"></a><span class="co">#  instrum         = instrum_var,</span></span>
-<span id="cb76-17"><a href="#cb76-17" aria-hidden="true" tabindex="-1"></a><span class="co">#  contemp_data    = contemp_data,</span></span>
-<span id="cb76-18"><a href="#cb76-18" aria-hidden="true" tabindex="-1"></a><span class="co">#  use_twosls      = TRUE,</span></span>
-<span id="cb76-19"><a href="#cb76-19" aria-hidden="true" tabindex="-1"></a><span class="co">#  trend           = 0,</span></span>
-<span id="cb76-20"><a href="#cb76-20" aria-hidden="true" tabindex="-1"></a><span class="co">#  confint         = 1.96,</span></span>
-<span id="cb76-21"><a href="#cb76-21" aria-hidden="true" tabindex="-1"></a><span class="co">#  hor             = 5)</span></span>
-<span id="cb76-22"><a href="#cb76-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb76-23"><a href="#cb76-23" aria-hidden="true" tabindex="-1"></a><span class="co"># summary(results_lp_iv)</span></span>
-<span id="cb76-24"><a href="#cb76-24" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(results_lp_iv)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb95"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb95-1"><a href="#cb95-1" aria-hidden="true" tabindex="-1"></a><span class="co">#endog_data &lt;- data.frame(</span></span>
+<span id="cb95-2"><a href="#cb95-2" aria-hidden="true" tabindex="-1"></a><span class="co">#  sales_growth_1y_percent = merged_data1$sales_growth_1y_percent,</span></span>
+<span id="cb95-3"><a href="#cb95-3" aria-hidden="true" tabindex="-1"></a><span class="co"># rd_intensity_percent = merged_data1$rd_intensity_percent)</span></span>
+<span id="cb95-4"><a href="#cb95-4" aria-hidden="true" tabindex="-1"></a><span class="co"># shock_var &lt;- endog_data$rd_intensity_percent</span></span>
+<span id="cb95-5"><a href="#cb95-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb95-6"><a href="#cb95-6" aria-hidden="true" tabindex="-1"></a><span class="co"># instrum_var &lt;- data.frame(patent_intensity_sales = as.numeric(merged_data1$patent_intensity_sales))</span></span>
+<span id="cb95-7"><a href="#cb95-7" aria-hidden="true" tabindex="-1"></a><span class="co"># instrum_var &lt;- data.frame(patent = as.numeric(merged_data1$patent_intensity_sales + 0))</span></span>
+<span id="cb95-8"><a href="#cb95-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb95-9"><a href="#cb95-9" aria-hidden="true" tabindex="-1"></a><span class="co"># contemp_data &lt;- model.matrix(~ sales_million + year + country + icb_sector, data = merged_data1)[, -1]</span></span>
+<span id="cb95-10"><a href="#cb95-10" aria-hidden="true" tabindex="-1"></a><span class="co"># contemp_data &lt;- as.data.frame(contemp_data)</span></span>
+<span id="cb95-11"><a href="#cb95-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb95-12"><a href="#cb95-12" aria-hidden="true" tabindex="-1"></a><span class="co"># results_lp_iv &lt;- lp_lin_iv(</span></span>
+<span id="cb95-13"><a href="#cb95-13" aria-hidden="true" tabindex="-1"></a><span class="co">#  endog_data      = endog_data,</span></span>
+<span id="cb95-14"><a href="#cb95-14" aria-hidden="true" tabindex="-1"></a><span class="co">#  lags_endog_lin  = 0,</span></span>
+<span id="cb95-15"><a href="#cb95-15" aria-hidden="true" tabindex="-1"></a><span class="co">#  shock           = shock_var,</span></span>
+<span id="cb95-16"><a href="#cb95-16" aria-hidden="true" tabindex="-1"></a><span class="co">#  instrum         = instrum_var,</span></span>
+<span id="cb95-17"><a href="#cb95-17" aria-hidden="true" tabindex="-1"></a><span class="co">#  contemp_data    = contemp_data,</span></span>
+<span id="cb95-18"><a href="#cb95-18" aria-hidden="true" tabindex="-1"></a><span class="co">#  use_twosls      = TRUE,</span></span>
+<span id="cb95-19"><a href="#cb95-19" aria-hidden="true" tabindex="-1"></a><span class="co">#  trend           = 0,</span></span>
+<span id="cb95-20"><a href="#cb95-20" aria-hidden="true" tabindex="-1"></a><span class="co">#  confint         = 1.96,</span></span>
+<span id="cb95-21"><a href="#cb95-21" aria-hidden="true" tabindex="-1"></a><span class="co">#  hor             = 5)</span></span>
+<span id="cb95-22"><a href="#cb95-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb95-23"><a href="#cb95-23" aria-hidden="true" tabindex="-1"></a><span class="co"># summary(results_lp_iv)</span></span>
+<span id="cb95-24"><a href="#cb95-24" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(results_lp_iv)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>I tried to run the two-stage local projection model using lp_lin_iv() from the lpirfs package, following the official documentation and examples closely. While the baseline model (lp_lin) runs fine, the 2SLS version repeatedly gives the error:</p>
 <p>“Tool must be given in data.frame format”.</p>
-<p>Even when I pass in the tool (patent_count) as a properly formatted data frame (no NA, correct length, confirmed with str() and class()), the function still fails. I also tested a minimal example and reinstalled the latest GitHub version of lpirfs, but the problem persists. /(TOT)/~~ ORZ</p>
+<p>Even when I pass in the tool (patent_intensity_sales) as a properly formatted data frame (no NA, correct length, confirmed with str() and class()), the function still fails. I also tested a minimal example and reinstalled the latest GitHub version of lpirfs, but the problem persists. /(TOT)/~~ ORZ</p>
+</section>
+<section id="summary-table" class="level2">
+<h2 class="anchored" data-anchor-id="summary-table">Summary Table</h2>
+<p>1.Three indicators of OLS</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb96"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a><span class="fu">etable</span>(ols_model, ols_model_growth, ols_model_log,</span>
+<span id="cb96-2"><a href="#cb96-2" aria-hidden="true" tabindex="-1"></a>       <span class="at">dict =</span> <span class="fu">c</span>(<span class="at">rd_lag1 =</span> <span class="st">"R&amp;D (lagged)"</span>,</span>
+<span id="cb96-3"><a href="#cb96-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">growth_lag1 =</span> <span class="st">"Lagged Growth"</span>,</span>
+<span id="cb96-4"><a href="#cb96-4" aria-hidden="true" tabindex="-1"></a>                <span class="at">size_lag1 =</span> <span class="st">"Lagged Size"</span>),</span>
+<span id="cb96-5"><a href="#cb96-5" aria-hidden="true" tabindex="-1"></a>       <span class="at">headers =</span> <span class="fu">c</span>(<span class="st">"Intensity"</span>, <span class="st">"Growth"</span>, <span class="st">"Log Level"</span>),</span>
+<span id="cb96-6"><a href="#cb96-6" aria-hidden="true" tabindex="-1"></a>       <span class="at">title =</span> <span class="st">"Comparison of R&amp;D Measures in OLS Regressions"</span>,</span>
+<span id="cb96-7"><a href="#cb96-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">tex =</span> <span class="cn">FALSE</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                          ols_model    ols_model_growth       ols_model_log
+                          Intensity              Growth           Log Level
+Dependent Var.:              growth              growth              growth
+                                                                           
+R&amp;D (lagged)    2.15e-5*** (4.8e-6)     0.0003 (0.0002)     0.0075 (0.0059)
+Lagged Growth   -0.5543*** (0.0426) -0.5715*** (0.0408) -0.5710*** (0.0411)
+Lagged Size      -5.5e-7. (3.24e-7)  -5.55e-7 (3.31e-7) -7.96e-7. (4.38e-7)
+Fixed-Effects:  ------------------- ------------------- -------------------
+icb_sector                      Yes                 Yes                 Yes
+country                         Yes                 Yes                 Yes
+year                            Yes                 Yes                 Yes
+_______________ ___________________ ___________________ ___________________
+S.E.: Clustered      by: icb_sector      by: icb_sector      by: icb_sector
+Observations                  3,227               3,227               3,227
+R2                          0.43164             0.42294             0.42273
+Within R2                   0.42887             0.42012             0.41991
+---
+Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+<p>2.Three indicators of OLS-IV</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb98"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a><span class="fu">etable</span>(iv_model, iv_model_growth, iv_model_log,</span>
+<span id="cb98-2"><a href="#cb98-2" aria-hidden="true" tabindex="-1"></a>       <span class="at">dict =</span> <span class="fu">c</span>(<span class="at">rd_lag1 =</span> <span class="st">"R&amp;D (Instrumented)"</span>,</span>
+<span id="cb98-3"><a href="#cb98-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">growth_lag1 =</span> <span class="st">"Lagged Growth"</span>,</span>
+<span id="cb98-4"><a href="#cb98-4" aria-hidden="true" tabindex="-1"></a>                <span class="at">size_lag1 =</span> <span class="st">"Lagged Size"</span>),</span>
+<span id="cb98-5"><a href="#cb98-5" aria-hidden="true" tabindex="-1"></a>       <span class="at">headers =</span> <span class="fu">c</span>(<span class="st">"Intensity"</span>, <span class="st">"Growth"</span>, <span class="st">"Log Level"</span>),</span>
+<span id="cb98-6"><a href="#cb98-6" aria-hidden="true" tabindex="-1"></a>       <span class="at">title =</span> <span class="st">"Comparison of IV Estimates Using Alternative R&amp;D Measures"</span>,</span>
+<span id="cb98-7"><a href="#cb98-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">tex =</span> <span class="cn">FALSE</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                              iv_model     iv_model_growth        iv_model_log
+                             Intensity              Growth           Log Level
+Dependent Var.:                 growth              growth              growth
+                                                                              
+R&amp;D (Instrumented)  2.66e-5. (1.37e-5)     0.2145 (0.1353) -0.9536*** (0.2172)
+Lagged Growth      -0.5503*** (0.0412) -0.6545*** (0.1406) -0.6151*** (0.0420)
+Lagged Size         -5.48e-7. (3.2e-7)   4.71e-6 (7.01e-6)  2.94e-5* (1.21e-5)
+Fixed-Effects:     ------------------- ------------------- -------------------
+icb_sector                         Yes                 Yes                 Yes
+country                            Yes                 Yes                 Yes
+year                               Yes                 Yes                 Yes
+__________________ ___________________ ___________________ ___________________
+S.E.: Clustered         by: icb_sector      by: icb_sector      by: icb_sector
+Observations                     3,227               3,227               3,227
+R2                             0.43114             -229.26             -3.0443
+Within R2                      0.42837             -230.38             -3.0640
+---
+Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+<p>3.OLS,2SLS and GMM</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb100"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb100-1"><a href="#cb100-1" aria-hidden="true" tabindex="-1"></a>ols_tbl <span class="ot">&lt;-</span> <span class="fu">tidy</span>(ols_model) <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">Model =</span> <span class="st">"OLS"</span>)</span>
+<span id="cb100-2"><a href="#cb100-2" aria-hidden="true" tabindex="-1"></a>iv_tbl  <span class="ot">&lt;-</span> <span class="fu">tidy</span>(iv_model)  <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">Model =</span> <span class="st">"IV (2SLS)"</span>)</span>
+<span id="cb100-3"><a href="#cb100-3" aria-hidden="true" tabindex="-1"></a>gmm_sum <span class="ot">&lt;-</span> <span class="fu">summary</span>(gmm_model)</span>
+<span id="cb100-4"><a href="#cb100-4" aria-hidden="true" tabindex="-1"></a>gmm_tbl <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(gmm_sum<span class="sc">$</span>coefficients)</span>
+<span id="cb100-5"><a href="#cb100-5" aria-hidden="true" tabindex="-1"></a>gmm_tbl <span class="ot">&lt;-</span> gmm_tbl <span class="sc">%&gt;%</span></span>
+<span id="cb100-6"><a href="#cb100-6" aria-hidden="true" tabindex="-1"></a>  tibble<span class="sc">::</span><span class="fu">rownames_to_column</span>(<span class="st">"term"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb100-7"><a href="#cb100-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">estimate =</span> Estimate, <span class="at">std.error =</span> <span class="st">`</span><span class="at">Std. Error</span><span class="st">`</span>, <span class="at">p.value =</span> <span class="st">`</span><span class="at">Pr(&gt;|z|)</span><span class="st">`</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb100-8"><a href="#cb100-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Model =</span> <span class="st">"GMM"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb100-9"><a href="#cb100-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(term, estimate, std.error, p.value, Model)</span>
+<span id="cb100-10"><a href="#cb100-10" aria-hidden="true" tabindex="-1"></a>all_models <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(ols_tbl, iv_tbl, gmm_tbl)</span>
+<span id="cb100-11"><a href="#cb100-11" aria-hidden="true" tabindex="-1"></a>final_table <span class="ot">&lt;-</span> all_models <span class="sc">%&gt;%</span></span>
+<span id="cb100-12"><a href="#cb100-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"rd_lag1"</span>, <span class="st">"growth_lag1"</span>, <span class="st">"size_lag1"</span>, </span>
+<span id="cb100-13"><a href="#cb100-13" aria-hidden="true" tabindex="-1"></a>                     <span class="st">"plm::lag(rd_intensity_percent, 1)"</span>, </span>
+<span id="cb100-14"><a href="#cb100-14" aria-hidden="true" tabindex="-1"></a>                     <span class="st">"plm::lag(sales_growth_1y_percent, 1)"</span>, </span>
+<span id="cb100-15"><a href="#cb100-15" aria-hidden="true" tabindex="-1"></a>                     <span class="st">"plm::lag(sales_million, 0:1)0"</span>, </span>
+<span id="cb100-16"><a href="#cb100-16" aria-hidden="true" tabindex="-1"></a>                     <span class="st">"plm::lag(sales_million, 0:1)1"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb100-17"><a href="#cb100-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb100-18"><a href="#cb100-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">Variable =</span> <span class="fu">case_when</span>(</span>
+<span id="cb100-19"><a href="#cb100-19" aria-hidden="true" tabindex="-1"></a>      term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"rd_lag1"</span>, <span class="st">"plm::lag(rd_intensity_percent, 1)"</span>) <span class="sc">~</span> <span class="st">"R&amp;D (lagged)"</span>,</span>
+<span id="cb100-20"><a href="#cb100-20" aria-hidden="true" tabindex="-1"></a>      term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"growth_lag1"</span>, <span class="st">"plm::lag(sales_growth_1y_percent, 1)"</span>) <span class="sc">~</span> <span class="st">"Lagged Growth"</span>,</span>
+<span id="cb100-21"><a href="#cb100-21" aria-hidden="true" tabindex="-1"></a>      term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"size_lag1"</span>, <span class="st">"plm::lag(sales_million, 0:1)0"</span>) <span class="sc">~</span> <span class="st">"Lagged Size (t)"</span>,</span>
+<span id="cb100-22"><a href="#cb100-22" aria-hidden="true" tabindex="-1"></a>      term <span class="sc">==</span> <span class="st">"plm::lag(sales_million, 0:1)1"</span> <span class="sc">~</span> <span class="st">"Lagged Size (t-1)"</span></span>
+<span id="cb100-23"><a href="#cb100-23" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb100-24"><a href="#cb100-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">Signif =</span> <span class="fu">case_when</span>(</span>
+<span id="cb100-25"><a href="#cb100-25" aria-hidden="true" tabindex="-1"></a>      p.value <span class="sc">&lt;</span> <span class="fl">0.001</span> <span class="sc">~</span> <span class="st">"***"</span>,</span>
+<span id="cb100-26"><a href="#cb100-26" aria-hidden="true" tabindex="-1"></a>      p.value <span class="sc">&lt;</span> <span class="fl">0.01</span>  <span class="sc">~</span> <span class="st">"**"</span>,</span>
+<span id="cb100-27"><a href="#cb100-27" aria-hidden="true" tabindex="-1"></a>      p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>  <span class="sc">~</span> <span class="st">"*"</span>,</span>
+<span id="cb100-28"><a href="#cb100-28" aria-hidden="true" tabindex="-1"></a>      p.value <span class="sc">&lt;</span> <span class="fl">0.1</span>   <span class="sc">~</span> <span class="st">"."</span>,</span>
+<span id="cb100-29"><a href="#cb100-29" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span>            <span class="sc">~</span> <span class="st">""</span></span>
+<span id="cb100-30"><a href="#cb100-30" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb100-31"><a href="#cb100-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">Coef_SE =</span> <span class="fu">paste0</span>(<span class="fu">sprintf</span>(<span class="st">"%.6f"</span>, estimate), <span class="st">" ("</span>, <span class="fu">sprintf</span>(<span class="st">"%.6f"</span>, std.error), <span class="st">")"</span>, Signif)</span>
+<span id="cb100-32"><a href="#cb100-32" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb100-33"><a href="#cb100-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Model, Variable, Coef_SE) <span class="sc">%&gt;%</span></span>
+<span id="cb100-34"><a href="#cb100-34" aria-hidden="true" tabindex="-1"></a>  tidyr<span class="sc">::</span><span class="fu">pivot_wider</span>(<span class="at">names_from =</span> Model, <span class="at">values_from =</span> Coef_SE) <span class="sc">%&gt;%</span></span>
+<span id="cb100-35"><a href="#cb100-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">relocate</span>(Variable)</span>
+<span id="cb100-36"><a href="#cb100-36" aria-hidden="true" tabindex="-1"></a>final_table <span class="sc">%&gt;%</span></span>
+<span id="cb100-37"><a href="#cb100-37" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kbl</span>(</span>
+<span id="cb100-38"><a href="#cb100-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">"Comparison of OLS, IV, and GMM Estimates"</span>,</span>
+<span id="cb100-39"><a href="#cb100-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">align =</span> <span class="st">"lccc"</span></span>
+<span id="cb100-40"><a href="#cb100-40" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb100-41"><a href="#cb100-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">FALSE</span>, <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"striped"</span>, <span class="st">"hover"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb100-42"><a href="#cb100-42" aria-hidden="true" tabindex="-1"></a>  <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="table table-striped table-hover caption-top table-sm small" data-quarto-postprocess="true">
+<caption>Comparison of OLS, IV, and GMM Estimates</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Variable</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">OLS</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">IV (2SLS)</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">GMM</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left; font-weight: bold;">R&amp;D (lagged)</td>
+<td style="text-align: center;">0.000022 (0.000005)***</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">0.000138 (0.000000)***</td>
+</tr>
+<tr class="even">
+<td style="text-align: left; font-weight: bold;">Lagged Growth</td>
+<td style="text-align: center;">-0.554270 (0.042579)***</td>
+<td style="text-align: center;">-0.550267 (0.041184)***</td>
+<td style="text-align: center;">-0.002681 (0.000268)***</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left; font-weight: bold;">Lagged Size (t)</td>
+<td style="text-align: center;">-0.000001 (0.000000).</td>
+<td style="text-align: center;">-0.000001 (0.000000).</td>
+<td style="text-align: center;">-0.000704 (0.000041)***</td>
+</tr>
+<tr class="even">
+<td style="text-align: left; font-weight: bold;">Lagged Size (t-1)</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">0.000777 (0.000041)***</td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
 </section>
 
 </main>

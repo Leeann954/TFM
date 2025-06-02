@@ -39,6 +39,7 @@ library(lpirfs)
 library(stargazer)
 library(broom) 
 library(kableExtra)
+library(modelsummary)
 ```
 
 ## Data input and Data cleaning from 2003 to 2023
@@ -1038,6 +1039,7 @@ Capital Expenditure and Sales: Capital expenditure (capex_million) shows a stron
 Negative Correlations with Rank: The variable rank (where a lower number indicates a better ranking) is negatively correlated with key performance indicators like R&D, sales, and employees. This aligns with expectations—top-ranked firms tend to have more resources, higher output, and greater investment in R&D.
 
 ## Input datasets
+
 ```{r}
 patents_data <- read.csv("patents count.csv")
 long_patents_data <- patents_data %>%
@@ -1049,10 +1051,13 @@ long_patents_data <- patents_data %>%
   ) %>%
   mutate(year = as.integer(year))  
 merged_data <- left_join(wide_data, long_patents_data, by = c("company", "year"))
+merged_data <- merged_data %>%
+  mutate(rd_intensity_per = (rd_million / sales_million) * 100)
 
 ```
 
 ## Missing value analysis
+
 ```{r}
 missing_percent <- round(colMeans(is.na(merged_data)) * 100, 2)
 missing_percent
@@ -1065,9 +1070,10 @@ merged_data <- merged_data |>
   select(-market_cap_growth_1y_percent,-market_cap_million)
 ```
 
-Given the presence of missing values across several key financial variables—such as capex_growth_1y_percent (23.12%), capex_million (19.59%), profit_million (11.22%), and profit_growth_1y_percent (12.11%)—I decided to perform imputation rather than removing the affected observations or variables. Since many of these indicators are important for the analysis, imputing missing values helps preserve the dataset’s completeness and analytical value. 
+Given the presence of missing values across several key financial variables—such as capex_growth_1y_percent (23.12%), capex_million (19.59%), profit_million (11.22%), and profit_growth_1y_percent (12.11%)—I decided to perform imputation rather than removing the affected observations or variables. Since many of these indicators are important for the analysis, imputing missing values helps preserve the dataset’s completeness and analytical value.
 
 To address the 19.59% missing rate in capex_million, imputation was applied in order to preserve analytical integrity and avoid unnecessary data loss:
+
 ```{r}
 ggplot(merged_data, aes(log10(capex_million + 1))) +
   geom_histogram(binwidth = 0.1, color = "skyblue3", fill = "skyblue") +
@@ -1077,9 +1083,11 @@ ggplot(merged_data, aes(log10(capex_million + 1))) +
   theme_classic() +
   theme(plot.title = element_text(size = 18))
 ```
+
 Among several variables with missing values, capex_million (capital expenditure) was selected as a representative example for imputation comparison due to its relatively high missing rate (19.59%) and its importance as a financial indicator of corporate innovation investment. By focusing on this variable, I aim to evaluate and compare the effectiveness of different imputation strategies and their implications for subsequent data modeling and analysis.
 
 ## Selection of imputation strategy
+
 ```{r}
 value_imputation <- merged_data |>
   mutate(
@@ -1109,9 +1117,11 @@ plots <- value_imputation_long %>%
 print(plots)
 
 ```
+
 These imputation methods differ significantly from the original distribution of capex_million. Zero imputation artificially creates a large number of zero values, severely distorting the distribution. Mean and median imputations, while simple and commonly used, concentrate the imputed values at a single point, resulting in unnatural peaks and a loss of the original distribution shape. Therefore, these methods are not suitable for highly skewed financial data.
 
 Mice imputation:
+
 ```{r}
 merged_numeric <- merged_data %>%
   select(capex_million, rd_million, sales_million, employees, profit_million)
@@ -1153,6 +1163,7 @@ print(plots)
 ```
 
 Miss Random Forest :
+
 ```{r}
 missForest_result <- missForest(as.data.frame(merged_numeric), ntree = 15)
 
@@ -1192,6 +1203,7 @@ Among all, Random Forest (RF) imputation stood out as the most effective. It mai
 Therefore, RF was selected as the most appropriate imputation method for this analysis, especially considering the financial nature and skewed distribution of the variable.
 
 ## Data imputation
+
 ```{r}
 vars_to_impute <- c(
   "rd_growth_1y_percent", "rd_intensity_percent", "sales_million", 
@@ -1213,6 +1225,7 @@ merged_data[vars_to_impute] <- imputed_data_rf
 ```{r}
 round(colMeans(is.na(merged_data)) * 100, 2)
 ```
+
 After imputation, we confirmed that all target variables no longer contain missing values, ensuring the dataset is complete and ready for subsequent analysis.
 
 ```{r}
@@ -1227,8 +1240,8 @@ merged_data <- merged_data %>%
 
 ### 1.by industry
 
-H₀: Top20% ≤ Others
-H₁: Top20% > Others
+H₀: Top20% ≤ Others H₁: Top20% \> Others
+
 ```{r}
 data_2019 <- merged_data %>% filter(year == 2019)
 data_2019 <- data_2019 %>%
@@ -1296,12 +1309,12 @@ stargazer(results_table,
 
 ```
 
-Based on 2019 data, firms in the top 20% of R&D-intensive industries show significantly stronger innovation output and growth performance compared to those in other industries. A Welch two-sample t-test indicates that their average patent intensity (patents per million in sales) is significantly higher (p = 0.005), with a mean of 0.13 versus just 0.02 in other industries—nearly an eightfold difference. Similarly, the Wilcoxon rank-sum test shows that sales growth is also significantly higher in the top 20% group (p < 0.001), with an average growth rate of 265%, compared to 5% in the rest. However, the large standard deviation in sales growth (around 3300%) suggests substantial variation, likely influenced by a few extreme high-growth firms. Overall, these findings support the hypothesis that firms in more R&D-intensive industries tend to be more innovative and achieve better growth outcomes.
+Based on 2019 data, firms in the top 20% of R&D-intensive industries show significantly stronger innovation output and growth performance compared to those in other industries. A Welch two-sample t-test indicates that their average patent intensity (patents per million in sales) is significantly higher (p = 0.005), with a mean of 0.13 versus just 0.02 in other industries—nearly an eightfold difference. Similarly, the Wilcoxon rank-sum test shows that sales growth is also significantly higher in the top 20% group (p \< 0.001), with an average growth rate of 265%, compared to 5% in the rest. However, the large standard deviation in sales growth (around 3300%) suggests substantial variation, likely influenced by a few extreme high-growth firms. Overall, these findings support the hypothesis that firms in more R&D-intensive industries tend to be more innovative and achieve better growth outcomes.
 
 ### 2.by country
 
-H₀: Top20% ≤ Others
-H₁: Top20% > Others
+H₀: Top20% ≤ Others H₁: Top20% \> Others
+
 ```{r}
 country_avg_log <- data_2019 %>%
   group_by(country) %>%
@@ -1367,9 +1380,10 @@ Firms in the top 20% of R&D-intensive countries did not show significantly highe
 
 These empirical results highlight a notable contrast between industry- and country-level effects of R&D intensity. While firms in top R&D-intensive industries exhibit significantly higher innovation output and sales growth, no such relationship is observed at the country level. This suggests that the transmission of R&D to firm performance may be more strongly shaped by industry-specific technological dynamics than by broader national R&D environments.
 
-## OLS 
+## OLS
 
 1.R&D intensity
+
 ```{r}
 panel_data <- merged_data %>%
   arrange(company, year) %>%
@@ -1398,6 +1412,17 @@ ols_model <- feols(
   data = panel_data
 )
 summary(ols_model)
+msummary(
+  list("OLS Model" = ols_model),
+  coef_map = c(
+    rd_lag1 = "Lagged R&D Intensity",
+    growth_lag1 = "Lagged Sales Growth",
+    size_lag1 = "Lagged Firm Size"
+  ),
+  stars = c('*' = 0.1, '**' = 0.05, '***' = 0.01),
+  fmt = "%.7f", 
+  output = "html"  
+)
 ```
 
 The OLS regression results show that lagged R&D intensity has a positive and statistically significant effect on firm-level sales growth (coefficient = 0.0000215, p < 0.001). This means that a 1 percentage point increase in R&D intensity leads to an approximate 0.00215% increase in sales growth. Although the magnitude is small, the effect is meaningful in a log-linear model and may accumulate over time.
@@ -1407,63 +1432,62 @@ In contrast, lagged firm growth is significantly negative (–0.55), indicating 
 The model includes industry, country, and year fixed effects, and explains approximately 42% of the variation in firm growth, with standard errors clustered at the industry level.
 
 2.R&D growth
-```{r}
-panel_data1 <- merged_data %>%
-  arrange(company, year) %>%
-  group_by(company) %>%
-  mutate(
-    size_lag1   = dplyr::lag(sales_million, order_by = year),
-    year_lag1   = dplyr::lag(year, order_by = year),
-    rd_lag1     = dplyr::lag(rd_growth_1y_percent, order_by = year) 
-  ) %>%
-  ungroup() %>%
-  mutate(
-    growth = log(sales_million) - log(size_lag1)
-  ) %>%
-  group_by(company) %>%
-  mutate(
-    growth_lag1 = dplyr::lag(growth, order_by = year)
-  ) %>%
-  ungroup()
 
-ols_model_growth <- feols(
-  growth ~ rd_lag1 + growth_lag1 + size_lag1 | icb_sector + country + year,
-  data = panel_data1
-)
-summary(ols_model_growth)
+```{r}
+#panel_data1 <- merged_data %>%
+#  arrange(company, year) %>%
+#  group_by(company) %>%
+#  mutate(
+#   size_lag1   = dplyr::lag(sales_million, order_by = year),
+#    year_lag1   = dplyr::lag(year, order_by = year),
+#    rd_lag1     = dplyr::lag(rd_growth_1y_percent, order_by = year) 
+#  ) %>%
+#  ungroup() %>%
+#  mutate(
+#    growth = log(sales_million) - log(size_lag1)
+#  ) %>%
+#  group_by(company) %>%
+#  mutate(
+#    growth_lag1 = dplyr::lag(growth, order_by = year)
+#  ) %>%
+#  ungroup()
+#ols_model_growth <- feols(
+#  growth ~ rd_lag1 + growth_lag1 + size_lag1 | icb_sector + country + year,
+#  data = panel_data1)
+#summary(ols_model_growth)
 ```
 
 3.R&D log level
-```{r}
-panel_data2 <- merged_data %>%
-  arrange(company, year) %>%
-  group_by(company) %>%
-  mutate(
-    size_lag1   = dplyr::lag(sales_million, order_by = year),
-    year_lag1   = dplyr::lag(year, order_by = year),
-    rd_log      = log1p(rd_million),  
-    rd_lag1     = dplyr::lag(rd_log, order_by = year)  
-  ) %>%
-  ungroup() %>%
-  mutate(
-    growth = log(sales_million) - log(size_lag1)
-  ) %>%
-  group_by(company) %>%
-  mutate(
-    growth_lag1 = dplyr::lag(growth, order_by = year)
-  ) %>%
-  ungroup()
 
-ols_model_log <- feols(
-  growth ~ rd_lag1 + growth_lag1 + size_lag1 | icb_sector + country + year,
-  data = panel_data2
-)
-summary(ols_model_log)
+```{r}
+#panel_data2 <- merged_data %>%
+ # arrange(company, year) %>%
+  #group_by(company) %>%
+  #mutate(
+   # size_lag1   = dplyr::lag(sales_million, order_by = year),
+    #year_lag1   = dplyr::lag(year, order_by = year),
+    #rd_log      = log1p(rd_million),  
+    #rd_lag1     = dplyr::lag(rd_log, order_by = year)  
+ # ) %>%
+ # ungroup() %>%
+ # mutate(
+  #  growth = log(sales_million) - log(size_lag1)
+  #) %>%
+#  group_by(company) %>%
+#  mutate(
+#   growth_lag1 = dplyr::lag(growth, order_by = year)
+#  ) %>%
+#  ungroup()
+#ols_model_log <- feols(
+# growth ~ rd_lag1 + growth_lag1 + size_lag1 | icb_sector + country + year,
+#  data = panel_data2)
+#summary(ols_model_log)
 ```
 
 ## OLS-IV
 
 1.R&D intensity
+
 ```{r}
 panel_data <- panel_data %>%
   group_by(company) %>%
@@ -1478,140 +1502,238 @@ iv_model <- feols(
   data = panel_data
 )
 summary(iv_model)
+msummary(
+  list('First Stage' = iv_model$iv_first_stage[[1]],
+       'Second Stage' = iv_model),
+  coef_map = c(patent_lag1 = 'Lagged Patents',
+               fit_rd_lag1 = 'Predicted R&D'),
+  stars = c('*' = .1, '**' = .05, '***' = .01),
+  fmt = "%.7f", 
+  output = "html" )
 ```
 
 The 2SLS regression addresses potential endogeneity in lagged R&D intensity (rd_lag1) by using lagged patent intensity (patent_lag1) as an instrument. The first-stage F-statistic is very high (30,168.7, p < 0.001), confirming that the instrument is highly relevant. The Wu-Hausman test rejects the null of exogeneity (p < 0.001), justifying the need for instrumental variable estimation.
 
-In the second stage, the coefficient on fitted R&D intensity (fit_rd_lag1) is 0.0000266, which remains positive and marginally significant (p = 0.0608). This suggests that a 1 percentage point increase in R&D intensity leads to an estimated 0.00266% increase in firm sales growth. 
+In the second stage, the coefficient on fitted R&D intensity (fit_rd_lag1) is 0.0000266, which remains positive and marginally significant (p = 0.0608). This suggests that a 1 percentage point increase in R&D intensity leads to an estimated 0.00266% increase in firm sales growth.
 
 Lagged firm growth again shows a strong negative effect (–0.55), reinforcing the earlier finding of mean reversion, and firm size remains weakly negative and not statistically significant at conventional levels.
 
-Overall, the IV results provide additional support for a positive, though modest, causal effect of R&D intensity on firm-level sales growth, and strengthen confidence in the interpretation of R&D as a productive investment. 
+Overall, the IV results provide additional support for a positive, though modest, causal effect of R&D intensity on firm-level sales growth, and strengthen confidence in the interpretation of R&D as a productive investment.
 
 2.R&D growth
+
 ```{r}
-panel_data1 <- panel_data1 %>%
-  group_by(company) %>%
-  arrange(year, .by_group = TRUE) %>%
-  mutate(
-    patent_lag1 = dplyr::lag(patent_intensity_sales, order_by = year)
-  ) %>%
-  ungroup()
-
-iv_model_growth <- feols(
-  growth ~ 1 + growth_lag1 + size_lag1 | icb_sector + country + year | rd_lag1 ~ patent_lag1,
-  data = panel_data1
-)
-
-summary(iv_model_growth)
+#panel_data1 <- panel_data1 %>%
+#  group_by(company) %>%
+#  arrange(year, .by_group = TRUE) %>%
+#  mutate(
+#    patent_lag1 = dplyr::lag(patent_intensity_sales, order_by = year)
+#  ) %>%
+#  ungroup()
+#iv_model_growth <- feols(
+#  growth ~ 1 + growth_lag1 + size_lag1 | icb_sector + country + year | rd_lag1 ~ patent_lag1,
+#  data = panel_data1)
+#summary(iv_model_growth)
 
 ```
 
 3.R&D log level
-```{r}
-panel_data2 <- panel_data2 %>%
-  mutate(rd_log = log1p(rd_million)) %>%
-  group_by(company) %>%
-  arrange(year, .by_group = TRUE) %>%
-  mutate(
-    patent_lag1 = dplyr::lag(patent_intensity_sales, order_by = year)
-  ) %>%
-  ungroup()
 
-iv_model_log <- feols(
-  growth ~ 1 + growth_lag1 + size_lag1 | icb_sector + country + year | rd_lag1 ~ patent_lag1,
-  data = panel_data2
-)
-summary(iv_model_log)
+```{r}
+#panel_data2 <- panel_data2 %>%
+#  mutate(rd_log = log1p(rd_million)) %>%
+#  group_by(company) %>%
+#  arrange(year, .by_group = TRUE) %>%
+#  mutate(
+#    patent_lag1 = dplyr::lag(patent_intensity_sales, order_by = year)
+# ) %>%
+# ungroup()
+#iv_model_log <- feols(
+#  growth ~ 1 + growth_lag1 + size_lag1 | icb_sector + country + year | rd_lag1 ~ patent_lag1,
+#  data = panel_data2)
+#summary(iv_model_log)
 ```
 
 ## GMM
 
 1.R&D intensity
+
 ```{r}
+
 library(plm)
 merged_data <- merged_data %>%
   mutate(
     company = as.factor(company),
     year = as.integer(year)
   )
-
+merged_data$patent_intensity_sales[!is.finite(merged_data$patent_intensity_sales)] <- NA
 pdata <- pdata.frame(merged_data, index = c("company", "year"))
 pdata <- na.omit(pdata)
-gmm_model <- plm::pgmm(
-  sales_growth_1y_percent ~ plm::lag(sales_growth_1y_percent, 1) + plm::lag(sales_million, 0:1) + plm::lag(rd_intensity_percent, 1) |
-    plm::lag(sales_growth_1y_percent, 2:3) + plm::lag(rd_intensity_percent, 2:3),
+
+
+panel_ols <- plm(
+  sales_growth_1y_percent ~ lag(sales_growth_1y_percent, 1) + lag(rd_intensity_percent, 1) + lag(sales_million, 1),
+  data = pdata,
+  model = "pooling")
+
+panel_within <- plm(
+  sales_growth_1y_percent ~ lag(sales_growth_1y_percent, 1) + lag(rd_intensity_percent, 1) + lag(sales_million, 1),
+  data = pdata,
+  model = "within")
+
+panel_ahsiao <- plm(
+  diff(sales_growth_1y_percent) ~ lag(diff(sales_growth_1y_percent), 1) - 1 | lag(sales_growth_1y_percent, 2),
+  data = panel_data,
+  model = "pooling")
+
+gmm_one_step <- pgmm(
+  sales_growth_1y_percent ~ lag(sales_growth_1y_percent, 1) + lag(sales_million, 1)+lag(rd_intensity_percent, 1) | lag(rd_intensity_percent, 2:3)+lag(patent_intensity_sales, 1),
+  data = pdata,
+  effect = "individual",
+  model = "onestep",
+  transformation = "d")
+#summary(gmm_one_step)
+
+gmm_two_step <- pgmm(
+  sales_growth_1y_percent ~ lag(sales_growth_1y_percent, 1) + lag(sales_million, 1)+lag(rd_intensity_percent, 1) | lag(rd_intensity_percent, 2:3)+lag(patent_intensity_sales, 1),
   data = pdata,
   effect = "individual",
   model = "twosteps",
-  transformation = "ld"
+  transformation = "d")
+#summary(gmm_two_step)
+
+sys_one_step <- pgmm(
+  sales_growth_1y_percent ~ lag(sales_growth_1y_percent, 1) +
+                            lag(sales_million, 1) +
+                            lag(rd_intensity_percent, 1)
+  |lag(rd_intensity_percent,    2:3) +lag(patent_intensity_sales, 1)
+  | lag(sales_million, 1),
+  data   = pdata,
+  effect = "individual",
+  model  = "onestep",
+  transformation = "ld",         
+  collapse        = TRUE    
 )
-plm:::summary.pgmm(gmm_model)
+#summary(sys_one_step)
+
+sys_two_step <- pgmm(
+  sales_growth_1y_percent ~ lag(sales_growth_1y_percent, 1) +
+                            lag(sales_million, 1) +
+                            lag(rd_intensity_percent, 1)
+  |lag(patent_intensity_sales, 1)+lag(rd_intensity_percent, 2:3)
+  | lag(sales_million, 1),
+  data            = pdata,
+  effect          = "individual",
+  model           = "twosteps",   
+  transformation  = "ld",         
+  collapse        = TRUE          
+)
+#summary(sys_two_step)
+s <- summary(gmm_two_step)
+# Windmeijer 
+sd_robust_ols <- sqrt(vcovHC(panel_ols)[1])
+sd_robust_within <- sqrt(vcovHC(panel_within)[1])
+sd_robust_one_step <- sqrt(vcovHC(gmm_one_step)[1])
+sd_robust_two_steps <- sqrt(vcovHC(gmm_two_step)[1])
+
+# Arellano-Bond 
+m1_one_step <- mtest(gmm_one_step, order = 1)
+m2_one_step <- mtest(gmm_one_step, order = 2)
+
+m1_two_steps <- s$m1$p.value
+m2_two_steps <- s$m2$p.value
+
+# Sargan-Hansen 
+sargan_one_step <- sargan(gmm_one_step)
+sargan_two_steps <- sargan(gmm_two_step)
 ```
 
-Using a  System GMM model on a panel of 417 firms from 2010 to 2019, I found it examines the effect of R&D intensity on firm-level sales growth, while addressing endogeneity and dynamic panel bias. The coefficient on lagged R&D intensity  is estimated at 0.000138 and is highly statistically significant (z = 632.1, p < 0.001). This implies that a 1 percentage point increase in R&D intensity is associated with a 0.0138% increase in one-year sales growth, all else equal. Though the magnitude appears small, this is consistent with the scale and units of R&D intensity and the specification in levels.
-
-Lagged firm growth  enters with a negative and highly significant coefficient (–0.00268), indicating mean reversion in growth. Meanwhile, current and lagged firm size are both significant, with signs suggesting that changes in size are positively related to future growth.
-
-Model diagnostics support the reliability of the GMM estimation:
-The Sargan test yields a p-value < 0.001, indicating possible instrument proliferation, which is a known risk in GMM; however,
-The AR(2) test (p = 0.93) suggests no second-order autocorrelation, satisfying a critical assumption for GMM validity.
-The Wald test strongly rejects the null that coefficients are jointly zero (p < 2.2e-16).
-
-Overall, the results confirm that R&D intensity has a positive and statistically robust causal effect on firm growth, even when controlling for firm dynamics and unobserved heterogeneity. The GMM framework strengthens this interpretation by mitigating simultaneity and measurement error concerns that may bias OLS estimates.
-
-2.R&D growth
 ```{r}
-gmm_model_growth <- plm::pgmm(
-  sales_growth_1y_percent ~ 
-    plm::lag(sales_growth_1y_percent, 1) + 
-    plm::lag(sales_million, 0:1) + 
-    plm::lag(rd_growth_1y_percent, 1) |
-    
-    plm::lag(sales_growth_1y_percent, 2:3) + 
-    plm::lag(rd_growth_1y_percent, 2:3),
-    
-  data = pdata,
-  effect = "individual",
-  model = "twosteps",
-  transformation = "ld"
+results_table_long <- data.frame(
+  Statistic = c(
+    "AR(1) coefficient estimate",
+    "Standard Error",
+    "Robust Standard Error",
+    "Arellano-Bond test p-value<br>(lag&nbsp;1)",
+    "Arellano-Bond test p-value<br>(lag&nbsp;2)",
+    "Sargan-Hansen test"
+  ),
+  OLS     = c(coef(panel_ols)[["lag(sales_growth_1y_percent, 1)"]],
+              sqrt(diag(vcov(panel_ols)))[1],
+              sd_robust_ols, "", "", ""),
+  Within  = c(coef(panel_within)[["lag(sales_growth_1y_percent, 1)"]],
+              sqrt(diag(vcov(panel_within)))[1],
+              sd_robust_within, "", "", ""),
+  `Anderson-Hsiao` = c(coef(panel_ahsiao)[1],
+                       sqrt(diag(vcov(panel_ahsiao)))[1],
+                       "", "", "", ""),
+  `1step Difference-GMM` = c(coef(gmm_one_step)[["lag(sales_growth_1y_percent, 1)"]],
+                             sqrt(diag(vcov(gmm_one_step)))[1],
+                             sd_robust_one_step,
+                             m1_one_step$p.value,
+                             m2_one_step$p.value,
+                             sargan_one_step$p.value),
+  `2steps Difference-GMM` = c(coef(gmm_two_step)[["lag(sales_growth_1y_percent, 1)"]],
+                              sqrt(diag(vcov(gmm_two_step)))[1],
+                              sd_robust_two_steps,
+                              m1_two_steps,
+                              m2_two_steps,
+                              sargan_two_steps$p.value),
+  `1step System-GMM`      = c(coef(sys_one_step)[["lag(sales_growth_1y_percent, 1)"]],
+                              sqrt(diag(vcov(sys_one_step)))[1],
+                              sqrt(vcovHC(sys_one_step))[1],            
+                              mtest(sys_one_step, order = 1)$p.value,
+                              mtest(sys_one_step, order = 2)$p.value,
+                              sargan(sys_one_step)$p.value),
+  `2steps System-GMM`     = c(coef(sys_two_step)[["lag(sales_growth_1y_percent, 1)"]],
+                              sqrt(diag(vcov(sys_two_step)))[1],
+                              sqrt(vcovHC(sys_two_step))[1],
+                              mtest(sys_two_step, order = 1)$p.value,
+                              mtest(sys_two_step, order = 2)$p.value,
+                              sargan(sys_two_step)$p.value)
 )
 
-plm:::summary.pgmm(gmm_model_growth)
+results_table_long <- results_table_long |>
+  mutate(across(-1,   
+                ~ ifelse(is.na(.x),
+                          "",                       
+                          sprintf("%.4f", as.numeric(.x))))) %>% 
+  mutate(across(-1, ~ gsub("^NA$", "", .x)))        
+
+
+colnames(results_table_long)[1] <- " "
+
+align_vec <- c("l", rep("c", ncol(results_table_long) - 1))
+
+results_table_long %>% 
+  kable("html",
+        escape    = FALSE,
+        align     = align_vec,
+        col.names = NULL) %>% 
+  kable_classic_2(full_width = FALSE, html_font = "Calibri", font_size = 14) %>% 
+  column_spec(1, width = "5cm", extra_css = "text-align:left;") %>% 
+  column_spec(2:ncol(results_table_long), extra_css = "text-align:center;") %>% 
+  add_header_above(
+    c(" " = 1,
+      "OLS"  = 1,
+      "Within" = 1,
+      "Anderson-Hsiao" = 1,
+      "1step Difference-GMM" = 1,
+      "2steps Difference-GMM" = 1,
+      "1step System-GMM" = 1,
+      "2steps System-GMM" = 1),
+    bold = FALSE, align = "center")
 ```
 
-3.R&D log level
-```{r}
-merged_data <- merged_data %>%
-  mutate(
-    rd_log = log1p(rd_million),
-    company = as.factor(company),
-    year = as.integer(year)
-  )
-
-pdata <- pdata.frame(merged_data, index = c("company", "year")) %>%
-  na.omit()
-
-gmm_model_log <- plm::pgmm(
-  sales_growth_1y_percent ~ 
-    plm::lag(sales_growth_1y_percent, 1) + 
-    plm::lag(sales_million, 0:1) + 
-    plm::lag(rd_log, 1) |
-    
-    plm::lag(sales_growth_1y_percent, 2:3) + 
-    plm::lag(rd_log, 2:3),
-    
-  data = pdata,
-  effect = "individual",
-  model = "twosteps",
-  transformation = "ld"
-)
-plm:::summary.pgmm(gmm_model_log)
-```
 
 ## LP-OLS
 
+$$
+\text{growth}_{i,t+h} = \alpha_{i,h} + \beta_{i,h} \cdot \text{RD}_{i,t} + \varepsilon_{i,t+h}
+$$
+
 1.R&D intensity
+
 ```{r}
 merged_data1 <- merged_data %>%
   mutate(
@@ -1620,180 +1742,263 @@ merged_data1 <- merged_data %>%
     country = as.factor(country),
     icb_sector = as.factor(icb_sector)
   )
-
-contemp_data <- model.matrix(~ sales_million + year + country + icb_sector, data = merged_data1)[, -1]
+contemp_data <- model.matrix(~  year + country + icb_sector, data = merged_data1)[, -1]
 contemp_data <- as.data.frame(contemp_data)
 
-
 endog_data <- data.frame(
-  sales_growth_1y_percent = merged_data$sales_growth_1y_percent,
-  rd_intensity_percent = merged_data$rd_intensity_percent
+  rd = merged_data$rd_intensity_percent,
+  growth = merged_data$sales_growth_1y_percent
 )
+
+exog_data <- data.frame(
+  sales_lag  = merged_data1$sales_million)
 
 results_lp <- lp_lin(
-  endog_data    = endog_data,
+  endog_data     = endog_data,
   lags_endog_lin = 0,
   shock_type     = 1,
   trend          = 0,
   confint        = 1.96,
   hor            = 5,
-  contemp_data   = contemp_data  
+  exog_data      = exog_data,
+  lags_exog      = 1,
+  contemp_data   = contemp_data
 )
-
 summary(results_lp)
-plot(results_lp)
+#plot(results_lp)
+library(ggplot2)
+
+mean_array <- results_lp$irf_lin_mean
+low_array  <- results_lp$irf_lin_low
+up_array   <- results_lp$irf_lin_up
+
+horizons <- 0:(dim(mean_array)[2] - 1)
+
+est_rd_to_growth <- mean_array[2, , 1]
+low_rd_to_growth <- low_array[2, , 1]
+up_rd_to_growth  <- up_array[2, , 1]
+
+df_irf <- data.frame(
+  h        = horizons,
+  estimate = est_rd_to_growth,
+  lower    = low_rd_to_growth,
+  upper    = up_rd_to_growth
+)
+
+ggplot(df_irf, aes(x = h, y = estimate)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "#66c2a5", alpha = 0.3) +
+  geom_line(color = "#238b45", size = 1) +
+  geom_point(color = "#238b45", size = 2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
+  scale_x_continuous(breaks = df_irf$h) +
+  labs(
+    title = "IRF of RD Shock on Growth",
+    x     = "Horizon (h)",
+    y     = "Impulse Response"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title       = element_text(hjust = 0.5, size = 16, face = "bold"),
+    axis.title       = element_text(face = "bold"),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank()
+  )
 ```
 
-TUsing the local projection method (Jordà, 2005), we estimate the dynamic effects between R&D intensity and sales growth over a 5-year horizon. The results show that a one-percentage-point shock to R&D intensity leads to a persistent and statistically significant increase in firm growth from year 1 to year 5, with p-values < 0.001 and the largest F-statistic reaching 2.39 at horizon 5. The effect peaks around year 3–5, indicating that innovation efforts have cumulative returns over time. 
 
-In contrast, sales growth does not significantly predict future R&D intensity across all horizons: all corresponding p-values are approximately 1.0, and the impulse response functions are flat and centered around zero. This asymmetry suggests a directional relationship—R&D drives growth, but not the other way around—helping to address concerns about reverse causality.
-
-2.R&D growth
-```{r}
-endog_data_growth <- data.frame(
-  sales_growth_1y_percent = merged_data$sales_growth_1y_percent,
-  rd_growth_1y_percent = merged_data$rd_growth_1y_percent
-)
-
-results_lp_growth <- lp_lin(
-  endog_data     = endog_data_growth,
-  lags_endog_lin = 0,
-  shock_type     = 1,
-  trend          = 0,
-  confint        = 1.96,
-  hor            = 5,
-  contemp_data   = contemp_data
-)
-
-summary(results_lp_growth)
-plot(results_lp_growth)
-
-```
-
-3.R&D log level
-```{r}
-endog_data_log <- data.frame(
-  sales_growth_1y_percent = merged_data$sales_growth_1y_percent,
-  rd_log = merged_data$rd_log
-)
-
-results_lp_log <- lp_lin(
-  endog_data     = endog_data_log,
-  lags_endog_lin = 0,
-  shock_type     = 1,
-  trend          = 0,
-  confint        = 1.96,
-  hor            = 5,
-  contemp_data   = contemp_data
-)
-
-summary(results_lp_log)
-plot(results_lp_log)
-```
 
 ## LP-2SLS
 
 ```{r}
-#endog_data <- data.frame(
-#  sales_growth_1y_percent = merged_data1$sales_growth_1y_percent,
-# rd_intensity_percent = merged_data1$rd_intensity_percent)
-# shock_var <- endog_data$rd_intensity_percent
+set.seed(007)
+tmp_df <- merged_data1 %>%
+  select(
+    rd_intensity_percent,
+    patent_intensity_sales,
+    sales_growth_1y_percent,
+    sales_million,
+    year, country, icb_sector
+  )
+valid_idx <- complete.cases(tmp_df)
+merged_clean <- merged_data1[valid_idx, ]
 
-# instrum_var <- data.frame(patent_intensity_sales = as.numeric(merged_data1$patent_intensity_sales))
-# instrum_var <- data.frame(patent = as.numeric(merged_data1$patent_intensity_sales + 0))
+endog_data_clean <- data.frame(
+  growth = merged_clean$sales_growth_1y_percent,
+  rd = merged_clean$rd_intensity_percent
+)
+shock_clean <- data.frame(
+  rd = merged_clean$rd_intensity_percent
+)
+instrum_clean <- data.frame(
+  patent = merged_clean$patent_intensity_sales
+)
+exog_data_clean <- data.frame(
+  sales = merged_clean$sales_million
+)
+contemp_data_clean <- model.matrix(
+  ~ year + country + icb_sector,
+  data = merged_clean
+)[, -1]
+contemp_data_clean <- as.data.frame(contemp_data_clean)
 
-# contemp_data <- model.matrix(~ sales_million + year + country + icb_sector, data = merged_data1)[, -1]
-# contemp_data <- as.data.frame(contemp_data)
+results_lp_iv <- lp_lin_iv(
+  endog_data     = endog_data_clean,
+  shock          = shock_clean,
+  instrum        = instrum_clean,
+  use_twosls     = TRUE,         
+  lags_endog_lin = 0,           
+  trend          = 0,            
+  confint        = 1.96,
+  hor            = 5,            
+  contemp_data   = contemp_data_clean,
+  exog_data      = exog_data_clean,
+  lags_exog      = 1
+)
 
-# results_lp_iv <- lp_lin_iv(
-#  endog_data      = endog_data,
-#  lags_endog_lin  = 0,
-#  shock           = shock_var,
-#  instrum         = instrum_var,
-#  contemp_data    = contemp_data,
-#  use_twosls      = TRUE,
-#  trend           = 0,
-#  confint         = 1.96,
-#  hor             = 5)
+summary(results_lp_iv)
 
-# summary(results_lp_iv)
-# plot(results_lp_iv)
 ```
 
-I tried to run the two-stage local projection model using lp_lin_iv() from the lpirfs package, following the official documentation and examples closely. While the baseline model (lp_lin) runs fine, the 2SLS version repeatedly gives the error:
 
-“Tool must be given in data.frame format”.
+## LP-GMM
 
-Even when I pass in the tool (patent_intensity_sales) as a properly formatted data frame (no NA, correct length, confirmed with str() and class()), the function still fails. I also tested a minimal example and reinstalled the latest GitHub version of lpirfs, but the problem persists.  /(TOT)/~~ ORZ
+```{r}
+contemp_mat <- model.matrix(
+  ~ icb_sector + country + year,
+  data = merged_clean
+)[, -1]
+contemp_df <- as.data.frame(contemp_mat)
+endog_df <- data.frame(
+  sales_growth = merged_clean$sales_growth_1y_percent
+)
+shock_df <- data.frame(
+  rd_shock = merged_clean$rd_intensity_percent
+)
+l_exog_df <- data.frame(
+  sales = merged_clean$sales_million)
+
+data_set_df <- merged_clean %>%
+  select(
+    company, 
+    year, 
+    sales_growth_1y_percent,  
+    rd_intensity_percent,      
+    patent_intensity_sales,    
+    sales_million,                
+    icb_sector,                
+    country,
+    everything()              
+  )
+
+results_lp_gmm <- lp_lin_panel(
+  data_set        = data_set_df,
+  data_sample     = "Full",
+  endog_data      = "sales_growth_1y_percent",
+  cumul_mult      = FALSE,
+  shock           = "rd_intensity_percent",
+  diff_shock      = TRUE,
+  iv_reg          = FALSE,
+  instrum         = "patent_intensity_sales",
+  panel_model     = "within",
+  panel_effect    = "individual",
+  robust_cov      = NULL,
+  use_gmm         = TRUE,
+  gmm_model       = "twosteps",
+  gmm_effect      = "individual",  
+  gmm_transformation = "d",
+  c_exog_data     = NULL,
+  l_exog_data     = "sales_million",
+  lags_exog_data  = 1,
+  c_fd_exog_data  = NULL,
+  l_fd_exog_data  = NULL,
+  lags_fd_exog_data = NaN,
+  confint         = 1.96,
+  hor             = 5
+)
+#summary(results_lp_gmm$reg_outputs[[1]])
+#summary(results_lp_gmm$reg_outputs[[2]])
+summary(results_lp_gmm$reg_outputs[[3]])
+#summary(results_lp_gmm$reg_outputs[[4]])
+#summary(results_lp_gmm$reg_outputs[[5]])
+
+```
+
+```{r}
+gmm_pvals <- data.frame(
+  Horizon  = paste0("h = ", 1:5),
+  Sargan_p = rep(NA_real_, 5),
+  AB1_p    = rep(NA_real_, 5),
+  AB2_p    = rep(NA_real_, 5),
+  stringsAsFactors = FALSE
+)
+
+for (h in 1:5) {
+  mod_h <- results_lp_gmm$reg_outputs[[h]]
+  
+  sargan_pval <- tryCatch({
+    plm::sargan(mod_h)$p.value
+  }, error = function(e) { NA_real_ })
+  
+  ab1_pval <- tryCatch({
+    plm::mtest(mod_h, order = 1)$p.value
+  }, error = function(e) { NA_real_ })
+  
+  ab2_pval <- tryCatch({
+    plm::mtest(mod_h, order = 2)$p.value
+  }, error = function(e) { NA_real_ })
+  
+  gmm_pvals$Sargan_p[h] <- sargan_pval
+  gmm_pvals$AB1_p[h]    <- ab1_pval
+  gmm_pvals$AB2_p[h]    <- ab2_pval
+}
+gmm_pvals_fmt <- gmm_pvals %>%
+  mutate(
+    Sargan_p = ifelse(is.na(Sargan_p), "", sprintf("%.4f", Sargan_p)),
+    AB1_p    = ifelse(is.na(AB1_p),    "", sprintf("%.4f", AB1_p)),
+    AB2_p    = ifelse(is.na(AB2_p),    "", sprintf("%.4f", AB2_p))
+  )
+colnames(gmm_pvals_fmt) <- c("Horizon", "Sargan p-value", "AB(1) p-value", "AB(2) p-value")
+
+library(knitr)
+library(kableExtra)
+
+gmm_pvals_fmt %>%
+  kable("html",
+        escape    = FALSE,
+        align     = c("l", "c", "c", "c"),
+        row.names = FALSE,
+        caption   = "LP-GMM （Twosteps DIF-GMM）: Horizon = 1-5 "
+  ) %>%
+  kable_classic_2(full_width = FALSE, html_font = "Calibri", font_size = 14) %>%
+  column_spec(1, width = "2.5cm", extra_css = "text-align:left;") %>%
+  column_spec(2:4, width = "2cm", extra_css = "text-align:center;")
+
+```
 
 ## Summary Table
 
 1.Three indicators of OLS
+
 ```{r}
-etable(ols_model, ols_model_growth, ols_model_log,
-       dict = c(rd_lag1 = "R&D (lagged)",
-                growth_lag1 = "Lagged Growth",
-                size_lag1 = "Lagged Size"),
-       headers = c("Intensity", "Growth", "Log Level"),
-       title = "Comparison of R&D Measures in OLS Regressions",
-       tex = FALSE)  
+#etable(ols_model, ols_model_growth, ols_model_log,
+#       dict = c(rd_lag1 = "R&D (lagged)",
+#                growth_lag1 = "Lagged Growth",
+#                size_lag1 = "Lagged Size"),
+#       headers = c("Intensity", "Growth", "Log Level"),
+#       title = "Comparison of R&D Measures in OLS Regressions",
+#       tex = FALSE)  
 ```
 
 2.Three indicators of OLS-IV
+
 ```{r}
-etable(iv_model, iv_model_growth, iv_model_log,
-       dict = c(rd_lag1 = "R&D (Instrumented)",
-                growth_lag1 = "Lagged Growth",
-                size_lag1 = "Lagged Size"),
-       headers = c("Intensity", "Growth", "Log Level"),
-       title = "Comparison of IV Estimates Using Alternative R&D Measures",
-       tex = FALSE) 
+#etable(iv_model, iv_model_growth, iv_model_log,
+#       dict = c(rd_lag1 = "R&D (Instrumented)",
+#                growth_lag1 = "Lagged Growth",
+#                size_lag1 = "Lagged Size"),
+#       headers = c("Intensity", "Growth", "Log Level"),
+#       title = "Comparison of IV Estimates Using Alternative R&D Measures",
+#       tex = FALSE) 
 ```
 
-3.OLS,2SLS and GMM
-```{r}
-ols_tbl <- tidy(ols_model) |> mutate(Model = "OLS")
-iv_tbl  <- tidy(iv_model)  |> mutate(Model = "IV (2SLS)")
-gmm_sum <- summary(gmm_model)
-gmm_tbl <- as.data.frame(gmm_sum$coefficients)
-gmm_tbl <- gmm_tbl %>%
-  tibble::rownames_to_column("term") %>%
-  rename(estimate = Estimate, std.error = `Std. Error`, p.value = `Pr(>|z|)`) %>%
-  mutate(Model = "GMM") %>%
-  select(term, estimate, std.error, p.value, Model)
-all_models <- bind_rows(ols_tbl, iv_tbl, gmm_tbl)
-final_table <- all_models %>%
-  filter(term %in% c("rd_lag1", "growth_lag1", "size_lag1", 
-                     "plm::lag(rd_intensity_percent, 1)", 
-                     "plm::lag(sales_growth_1y_percent, 1)", 
-                     "plm::lag(sales_million, 0:1)0", 
-                     "plm::lag(sales_million, 0:1)1")) %>%
-  mutate(
-    Variable = case_when(
-      term %in% c("rd_lag1", "plm::lag(rd_intensity_percent, 1)") ~ "R&D (lagged)",
-      term %in% c("growth_lag1", "plm::lag(sales_growth_1y_percent, 1)") ~ "Lagged Growth",
-      term %in% c("size_lag1", "plm::lag(sales_million, 0:1)0") ~ "Lagged Size (t)",
-      term == "plm::lag(sales_million, 0:1)1" ~ "Lagged Size (t-1)"
-    ),
-    Signif = case_when(
-      p.value < 0.001 ~ "***",
-      p.value < 0.01  ~ "**",
-      p.value < 0.05  ~ "*",
-      p.value < 0.1   ~ ".",
-      TRUE            ~ ""
-    ),
-    Coef_SE = paste0(sprintf("%.6f", estimate), " (", sprintf("%.6f", std.error), ")", Signif)
-  ) %>%
-  select(Model, Variable, Coef_SE) %>%
-  tidyr::pivot_wider(names_from = Model, values_from = Coef_SE) %>%
-  relocate(Variable)
-final_table %>%
-  kbl(
-    caption = "Comparison of OLS, IV, and GMM Estimates",
-    align = "lccc"
-  ) %>%
-  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover")) %>%
-  column_spec(1, bold = TRUE)
-
-```
 

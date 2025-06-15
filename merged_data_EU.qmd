@@ -40,6 +40,7 @@ library(stargazer)
 library(broom) 
 library(kableExtra)
 library(modelsummary)
+library(gt)
 ```
 
 ## Data input and Data cleaning from 2003 to 2023
@@ -990,7 +991,7 @@ head(rank_stability, 10)
 top_stable <- rank_stability %>% slice_min(sd_rank, n = 20)
 
 ggplot(top_stable, aes(x = reorder(company, sd_rank), y = sd_rank)) +
-  geom_col(fill = "steelblue") +
+  geom_col(fill = "orange") +
   coord_flip() +
   labs(
     title = "Top 20 Most Stable Companies by Rank (2010–2019)",
@@ -1267,7 +1268,7 @@ wilcox.test(sales_growth_1y_percent ~ industry_group, data = data_2019, alternat
 ```
 
 ```{r}
- desc_stats <- data_2019 %>% 
+desc_stats <- data_2019 %>% 
   group_by(industry_group) %>% 
   summarise(
     n_firms           = n(),
@@ -1275,37 +1276,58 @@ wilcox.test(sales_growth_1y_percent ~ industry_group, data = data_2019, alternat
     sd_pat_int        = sd(patent_intensity_sales,    na.rm = TRUE),
     mean_sales_growth = mean(sales_growth_1y_percent, na.rm = TRUE),
     sd_sales_growth   = sd(sales_growth_1y_percent,   na.rm = TRUE),
+    p_value           = NA_real_,
     .groups = "drop"
   )
 
-pat_test   <- t.test(patent_intensity_sales ~ industry_group,
-                     data = data_2019, alternative = "greater") %>% tidy()
+pat_test <- t.test(patent_intensity_sales ~ industry_group,
+                   data        = data_2019,
+                   alternative = "greater") %>% 
+  tidy() %>% 
+  transmute(
+    industry_group   = "t-test (patent intensity)",
+    n_firms          = NA_integer_,
+    mean_pat_int     = NA_real_,
+    sd_pat_int       = NA_real_,
+    mean_sales_growth= NA_real_,
+    sd_sales_growth  = NA_real_,
+    p_value          = p.value
+  )
 
 sales_test <- wilcox.test(sales_growth_1y_percent ~ industry_group,
-                          data = data_2019, alternative = "greater") %>% tidy()
+                          data        = data_2019,
+                          alternative = "greater") %>% 
+  tidy() %>% 
+  transmute(
+    industry_group   = "Wilcoxon (sales growth)",
+    n_firms          = NA_integer_,
+    mean_pat_int     = NA_real_,
+    sd_pat_int       = NA_real_,
+    mean_sales_growth= NA_real_,
+    sd_sales_growth  = NA_real_,
+    p_value          = p.value
+  )
 
-test_rows <- tibble(
-  industry_group     = c("t-test (patent intensity)", "Wilcoxon (sales growth)"),
-  n_firms            = NA,                
-  mean_pat_int       = c(pat_test$estimate, sales_test$estimate),
-  sd_pat_int         = c(pat_test$statistic, sales_test$statistic),
-  mean_sales_growth  = c(pat_test$p.value,  sales_test$p.value),
-  sd_sales_growth    = NA
-)
+results_table <- bind_rows(desc_stats, pat_test, sales_test)
 
-results_table <- bind_rows(desc_stats, test_rows)
+results_table %>%
+  kable("html",
+        caption   = "Top-20% Industries vs. Others (2019)",
+        col.names = c(
+          "Group / Test",
+          "N firms",
+          "Mean Patent Intensity",
+          "SD Patent Intensity",
+          "Mean Sales Growth (%)",
+          "SD Sales Growth (%)",
+          "p-value"
+        ),
+        digits    = 3,
+        escape    = FALSE) %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  group_rows("Descriptive Statistics",    1, nrow(desc_stats)) %>%
+  group_rows("Statistical Tests", nrow(desc_stats) + 1, nrow(results_table))
 
-stargazer(results_table,
-          type   = "text",     
-          title  = "Top-20 % Industries vs. Others (2019) ",
-          summary = FALSE,
-          digits = 2,
-          align  = TRUE,
-          covariate.labels = c(
-            "Group / Test", "N firms",
-            "Mean Patent Intensity", "SD Patent Intensity",
-            "Mean Sales Growth (%)", "SD Sales Growth (%)"
-          ))
 
 ```
 
@@ -1336,7 +1358,7 @@ wilcox.test(sales_growth_1y_percent ~ country_group, data = data_2019, alternati
 ```
 
 ```{r}
-desc_stats <- data_2019 %>% 
+desc_stats_ctry <- data_2019 %>% 
   group_by(country_group) %>% 
   summarise(
     n_firms           = n(),
@@ -1344,36 +1366,56 @@ desc_stats <- data_2019 %>%
     sd_pat_int        = sd(patent_intensity_sales,    na.rm = TRUE),
     mean_sales_growth = mean(sales_growth_1y_percent, na.rm = TRUE),
     sd_sales_growth   = sd(sales_growth_1y_percent,   na.rm = TRUE),
+    p_value           = NA_real_,
     .groups = "drop"
   )
+pat_test_ctry <- t.test(patent_intensity_sales ~ country_group,
+                        data        = data_2019,
+                        alternative = "greater") %>% 
+  tidy() %>% 
+  transmute(
+    country_group      = "t-test (patent intensity)",
+    n_firms            = NA_integer_,
+    mean_pat_int       = NA_real_,
+    sd_pat_int         = NA_real_,
+    mean_sales_growth  = NA_real_,
+    sd_sales_growth    = NA_real_,
+    p_value            = p.value
+  )
+sales_test_ctry <- wilcox.test(sales_growth_1y_percent ~ country_group,
+                               data        = data_2019,
+                               alternative = "greater") %>% 
+  tidy() %>% 
+  transmute(
+    country_group      = "Wilcoxon (sales growth)",
+    n_firms            = NA_integer_,
+    mean_pat_int       = NA_real_,
+    sd_pat_int         = NA_real_,
+    mean_sales_growth  = NA_real_,
+    sd_sales_growth    = NA_real_,
+    p_value            = p.value
+  )
 
-pat_test   <- t.test(patent_intensity_sales ~ country_group,
-                     data = data_2019, alternative = "greater") %>% tidy()
+results_country <- bind_rows(desc_stats_ctry, pat_test_ctry, sales_test_ctry)
 
-sales_test <- wilcox.test(sales_growth_1y_percent ~ country_group,
-                          data = data_2019, alternative = "greater") %>% tidy()
+results_country %>%
+  kable("html",
+        caption   = "Top-20% Countries vs. Others (2019)",
+        col.names = c(
+          "Group / Test",
+          "N firms",
+          "Mean Patent Intensity",
+          "SD Patent Intensity",
+          "Mean Sales Growth (%)",
+          "SD Sales Growth (%)",
+          "p-value"
+        ),
+        digits    = 3,
+        escape    = FALSE) %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  group_rows("Descriptive Statistics",    1, nrow(desc_stats_ctry)) %>%
+  group_rows("Statistical Tests", nrow(desc_stats_ctry) + 1, nrow(results_country))
 
-test_rows <- tibble(
-  country_group      = c("t-test (patent intensity)", "Wilcoxon (sales growth)"),
-  n_firms            = NA,
-  mean_pat_int       = c(pat_test$estimate, sales_test$estimate),
-  sd_pat_int         = c(pat_test$statistic, sales_test$statistic),
-  mean_sales_growth  = c(pat_test$p.value,   sales_test$p.value),
-  sd_sales_growth    = NA
-)
-results_table <- bind_rows(desc_stats, test_rows)
-
-stargazer(results_table,
-          type   = "text",     
-          summary = FALSE,
-          title  = "Top-20 % Countries vs. Others (2019) ",
-          digits = 2,
-          align  = TRUE,
-          covariate.labels = c(
-            "Group / Test", "N firms",
-            "Mean Patent Intensity", "SD Patent Intensity",
-            "Mean Sales Growth (%)", "SD Sales Growth (%)"
-          ))
 ```
 
 Firms in the top 20% of R&D-intensive countries did not show significantly higher patent intensity or sales growth compared to others. The t-test (p = 0.061) and Wilcoxon test (p = 0.125) both suggest no statistically significant differences, implying that the impact of country-level R&D intensity on firm outcomes may be weaker or less direct.
@@ -1420,8 +1462,9 @@ msummary(
     size_lag1 = "Lagged Firm Size"
   ),
   stars = c('*' = 0.1, '**' = 0.05, '***' = 0.01),
-  fmt = "%.7f", 
-  output = "html"  
+  fmt = "%.7f",
+  gof_omit = "^(?!n|R2).*",  
+  output = "kableExtra"
 )
 ```
 
@@ -1434,54 +1477,54 @@ The model includes industry, country, and year fixed effects, and explains appro
 2.R&D growth
 
 ```{r}
-#panel_data1 <- merged_data %>%
-#  arrange(company, year) %>%
-#  group_by(company) %>%
-#  mutate(
-#   size_lag1   = dplyr::lag(sales_million, order_by = year),
-#    year_lag1   = dplyr::lag(year, order_by = year),
-#    rd_lag1     = dplyr::lag(rd_growth_1y_percent, order_by = year) 
-#  ) %>%
-#  ungroup() %>%
-#  mutate(
-#    growth = log(sales_million) - log(size_lag1)
-#  ) %>%
-#  group_by(company) %>%
-#  mutate(
-#    growth_lag1 = dplyr::lag(growth, order_by = year)
-#  ) %>%
-#  ungroup()
-#ols_model_growth <- feols(
-#  growth ~ rd_lag1 + growth_lag1 + size_lag1 | icb_sector + country + year,
-#  data = panel_data1)
-#summary(ols_model_growth)
+panel_data1 <- merged_data %>%
+  arrange(company, year) %>%
+ group_by(company) %>%
+  mutate(
+   size_lag1   = dplyr::lag(sales_million, order_by = year),
+    year_lag1   = dplyr::lag(year, order_by = year),
+    rd_lag1     = dplyr::lag(rd_growth_1y_percent, order_by = year) 
+  ) %>%
+  ungroup() %>%
+  mutate(
+    growth = log(sales_million) - log(size_lag1)
+  ) %>%
+  group_by(company) %>%
+  mutate(
+    growth_lag1 = dplyr::lag(growth, order_by = year)
+  ) %>%
+  ungroup()
+ols_model_growth <- feols(
+  growth ~ rd_lag1 + growth_lag1 + size_lag1 | icb_sector + country + year,
+  data = panel_data1)
+summary(ols_model_growth)
 ```
 
 3.R&D log level
 
 ```{r}
-#panel_data2 <- merged_data %>%
- # arrange(company, year) %>%
-  #group_by(company) %>%
-  #mutate(
-   # size_lag1   = dplyr::lag(sales_million, order_by = year),
-    #year_lag1   = dplyr::lag(year, order_by = year),
-    #rd_log      = log1p(rd_million),  
-    #rd_lag1     = dplyr::lag(rd_log, order_by = year)  
- # ) %>%
- # ungroup() %>%
- # mutate(
-  #  growth = log(sales_million) - log(size_lag1)
-  #) %>%
-#  group_by(company) %>%
-#  mutate(
-#   growth_lag1 = dplyr::lag(growth, order_by = year)
-#  ) %>%
-#  ungroup()
-#ols_model_log <- feols(
-# growth ~ rd_lag1 + growth_lag1 + size_lag1 | icb_sector + country + year,
-#  data = panel_data2)
-#summary(ols_model_log)
+panel_data2 <- merged_data %>%
+  arrange(company, year) %>%
+  group_by(company) %>%
+  mutate(
+    size_lag1   = dplyr::lag(sales_million, order_by = year),
+    year_lag1   = dplyr::lag(year, order_by = year),
+    rd_log      = log1p(rd_million),  
+    rd_lag1     = dplyr::lag(rd_log, order_by = year)  
+  ) %>%
+  ungroup() %>%
+  mutate(
+    growth = log(sales_million) - log(size_lag1)
+  ) %>%
+ group_by(company) %>%
+  mutate(
+   growth_lag1 = dplyr::lag(growth, order_by = year)
+  ) %>%
+  ungroup()
+ols_model_log <- feols(
+ growth ~ rd_lag1 + growth_lag1 + size_lag1 | icb_sector + country + year,
+  data = panel_data2)
+summary(ols_model_log)
 ```
 
 ## OLS-IV
@@ -1508,8 +1551,9 @@ msummary(
   coef_map = c(patent_lag1 = 'Lagged Patents',
                fit_rd_lag1 = 'Predicted R&D'),
   stars = c('*' = .1, '**' = .05, '***' = .01),
-  fmt = "%.7f", 
-  output = "html" )
+  fmt = "%.7f",
+  gof_omit = "^(?!n|R2).*", 
+  output = "kableExtra" )
 ```
 
 The 2SLS regression addresses potential endogeneity in lagged R&D intensity (rd_lag1) by using lagged patent intensity (patent_lag1) as an instrument. The first-stage F-statistic is very high (30,168.7, p < 0.001), confirming that the instrument is highly relevant. The Wu-Hausman test rejects the null of exogeneity (p < 0.001), justifying the need for instrumental variable estimation.
@@ -1555,8 +1599,6 @@ Overall, the IV results provide additional support for a positive, though modest
 ```
 
 ## GMM
-
-1.R&D intensity
 
 ```{r}
 
@@ -1732,7 +1774,6 @@ $$
 \text{growth}_{i,t+h} = \alpha_{i,h} + \beta_{i,h} \cdot \text{RD}_{i,t} + \varepsilon_{i,t+h}
 $$
 
-1.R&D intensity
 
 ```{r}
 merged_data1 <- merged_data %>%
@@ -1765,8 +1806,7 @@ results_lp <- lp_lin(
   contemp_data   = contemp_data
 )
 summary(results_lp)
-#plot(results_lp)
-library(ggplot2)
+plot(results_lp)
 
 mean_array <- results_lp$irf_lin_mean
 low_array  <- results_lp$irf_lin_low
@@ -1784,15 +1824,17 @@ df_irf <- data.frame(
   lower    = low_rd_to_growth,
   upper    = up_rd_to_growth
 )
+df_irf1 <- df_irf %>% filter(h <= 2)
 
-ggplot(df_irf, aes(x = h, y = estimate)) +
+ggplot(df_irf1, aes(x = h, y = estimate)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "#66c2a5", alpha = 0.3) +
   geom_line(color = "#238b45", size = 1) +
   geom_point(color = "#238b45", size = 2) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
   scale_x_continuous(breaks = df_irf$h) +
+  ylim(-0.002, 0.004) +  
   labs(
-    title = "IRF of RD Shock on Growth",
+    title = "IRF of RD Shock on Growth ",
     x     = "Horizon (h)",
     y     = "Impulse Response"
   ) +
@@ -1803,9 +1845,22 @@ ggplot(df_irf, aes(x = h, y = estimate)) +
     panel.grid.major = element_line(color = "gray90"),
     panel.grid.minor = element_blank()
   )
+df_irf %>%
+  mutate(
+    estimate = round(estimate, 6),
+    lower    = round(lower, 6),
+    upper    = round(upper, 6)
+  ) %>%
+  gt() %>%
+  cols_label(
+    h        = "Horizon (h)",
+    estimate = "Estimate",
+    lower    = "Lower Bound",
+    upper    = "Upper Bound"
+  ) %>%
+  tab_header(
+    title = "Impulse Response of R&D Shock on Firm Growth")
 ```
-
-
 
 ## LP-2SLS
 
@@ -1840,7 +1895,6 @@ contemp_data_clean <- model.matrix(
   data = merged_clean
 )[, -1]
 contemp_data_clean <- as.data.frame(contemp_data_clean)
-
 results_lp_iv <- lp_lin_iv(
   endog_data     = endog_data_clean,
   shock          = shock_clean,
@@ -1852,11 +1906,46 @@ results_lp_iv <- lp_lin_iv(
   hor            = 5,            
   contemp_data   = contemp_data_clean,
   exog_data      = exog_data_clean,
-  lags_exog      = 1
-)
-
+  lags_exog      = 1)
 summary(results_lp_iv)
 
+mean_array <- results_lp_iv$irf_lin_mean
+library(gt)
+df_iv <- data.frame(
+  Horizon  = 0:(dim(mean_array)[2] - 1),
+  Estimate = round(mean_array[1, ], 5),
+  CI_Lower = round(results_lp_iv$irf_lin_low[1, ], 5),
+  CI_Upper = round(results_lp_iv$irf_lin_up[1, ], 5)
+)
+
+df_iv %>%
+  gt() %>%
+  tab_header(
+    title = "Impulse Response of R&D Shock on Firm Growth",
+    subtitle = "Local Projections IV Estimation (95% CI)"
+  ) %>%
+  fmt_number(
+    columns = c(Estimate, CI_Lower, CI_Upper),
+    decimals = 5
+  ) %>%
+  cols_label(
+    Horizon  = "Horizon (h)",
+    Estimate = "IRF Estimate",
+    CI_Lower = "Lower 95% CI",
+    CI_Upper = "Upper 95% CI"
+  ) %>%
+  tab_style(
+    style = list(
+      cell_text(weight = "bold")
+    ),
+    locations = cells_column_labels(everything())
+  ) %>%
+  opt_table_font(font = google_font("Roboto")) %>%
+  tab_options(
+    table.border.top.color = "gray",
+    table.border.bottom.color = "gray",
+    column_labels.background.color = "white",
+    table_body.hlines.color = "gray90")
 ```
 
 
@@ -1980,13 +2069,14 @@ gmm_pvals_fmt %>%
 1.Three indicators of OLS
 
 ```{r}
-#etable(ols_model, ols_model_growth, ols_model_log,
-#       dict = c(rd_lag1 = "R&D (lagged)",
-#                growth_lag1 = "Lagged Growth",
-#                size_lag1 = "Lagged Size"),
-#       headers = c("Intensity", "Growth", "Log Level"),
-#       title = "Comparison of R&D Measures in OLS Regressions",
-#       tex = FALSE)  
+etable(ols_model, ols_model_growth, ols_model_log,
+       dict = c(rd_lag1 = "R&D (lagged)",
+                growth_lag1 = "Lagged Growth",
+                size_lag1 = "Lagged Size"),
+       headers = c("Intensity", "Growth", "Log Level"),
+       title = "Comparison of R&D Measures in OLS Regressions",
+       tex = FALSE)  
+
 ```
 
 2.Three indicators of OLS-IV
@@ -2000,5 +2090,4 @@ gmm_pvals_fmt %>%
 #       title = "Comparison of IV Estimates Using Alternative R&D Measures",
 #       tex = FALSE) 
 ```
-
 

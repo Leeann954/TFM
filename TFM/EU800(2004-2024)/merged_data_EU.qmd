@@ -1,5 +1,5 @@
 ---
-title: "TFM data merged"
+title: "TFM data analysis"
 editor: visual
 output: 
   html_document:
@@ -41,6 +41,15 @@ library(broom)
 library(kableExtra)
 library(modelsummary)
 library(gt)
+library(psych)
+library(flextable)
+library(broom)
+library(scales)
+library(patchwork)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(ggrepel)
 ```
 
 ## Data input and Data cleaning from 2003 to 2023
@@ -893,6 +902,48 @@ ggplot(company_count_country, aes(x = reorder(country, n_companies), y = n_compa
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5)) +  
   scale_y_continuous(expand = expansion(mult = c(0, 0.1)))  
+
+europe_map <- ne_countries(scale = "medium", returnclass = "sf") %>%
+  filter(region_un == "Europe")
+company_count_country <- data.frame(
+  country = c("Germany", "United Kingdom", "France", "Sweden", "Italy",
+              "Finland", "Denmark", "Netherlands", "Belgium", "Austria",
+              "Spain", "Ireland", "Luxembourg", "Portugal",
+              "Slovenia", "Greece", "Czechia"),
+  n_companies = c(107, 77, 56, 34, 26, 22, 22, 17, 17, 14, 12, 9, 3, 2, 1, 1, 1)
+)
+europe_map_data <- europe_map %>%
+  left_join(company_count_country, by = c("name" = "country"))
+
+europe_map_data <- europe_map_data %>%
+  mutate(
+    centroid = st_point_on_surface(geometry),
+    lon = st_coordinates(centroid)[, 1],
+    lat = st_coordinates(centroid)[, 2],
+    text_color = ifelse(n_companies >= 50, "#c6dbef", "black")
+  )
+ggplot(europe_map_data) +
+  geom_sf(aes(fill = n_companies), color = "white", size = 0.2) +
+  scale_fill_gradient(
+    low = "#c6dbef", high = "#08306b", na.value = "gray90", name = "Company Count"
+  ) +
+  geom_text(
+    data = europe_map_data %>% filter(!is.na(n_companies)),
+    aes(x = lon, y = lat, label = paste0(n_companies, "\n", name), color = text_color),
+    size = 2.8, lineheight = 0.9,
+    show.legend = FALSE
+  ) +
+  scale_color_identity() +  
+  coord_sf(xlim = c(-25, 45), ylim = c(34, 72), expand = FALSE) +
+  labs(title = "Number of Companies by Country in Europe") +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    legend.title = element_text(face = "bold"),
+    panel.grid = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank())
 ```
 
 The bar chart shows the number of companies per country that consistently appeared in the EU R&D ranking from 2010 to 2019. Germany leads with 107 firms, followed by the UK (77), France (56), and Sweden (34). These top contributors reflect the strong and stable innovation presence of these countries in the EU during this decade. Other countries like Italy, Finland, and Denmark also maintain a noticeable presence, while the remaining countries contribute relatively fewer consistent players.
@@ -916,9 +967,7 @@ wide_data$icb_sector <- dplyr::recode(wide_data$icb_sector,
 
   "Software"         = "Software & Computer Services",
   "Computer Services" = "Software & Computer Services",
-  "Other Financials" = "Financial Services"
-)
-
+  "Other Financials" = "Financial Services")
 
 company_count_industry <- wide_data %>%
   group_by(icb_sector) %>%
@@ -941,7 +990,6 @@ ggplot(company_count_industry, aes(x = reorder(icb_sector, n_companies), y = n_c
     axis.text.y = element_text(size = 7)
   ) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.2)))  
-
 ```
 
 The dot plot illustrates the number of companies in each ICB sector that consistently appeared in the EU R&D rankings from 2010 to 2019. The leading sectors are Industrial Engineering (57 firms), Industrial Machinery (47), and Pharmaceuticals & Biotechnology (44), highlighting the central role of these sectors in sustained innovation.
@@ -1160,7 +1208,6 @@ plots <- mice_imputed_long %>%
   theme(legend.position = "none", plot.title = element_text(size = 18))
 
 print(plots)
-
 ```
 
 Miss Random Forest :
@@ -1170,8 +1217,7 @@ missForest_result <- missForest(as.data.frame(merged_numeric), ntree = 15)
 
 missForest_imputed <- data.frame(
   original = merged_numeric$capex_million,
-  imputed_missForest = missForest_result$ximp$capex_million
-)
+  imputed_missForest = missForest_result$ximp$capex_million)
 
 variables <- c("original", "imputed_missForest")
 titles <- c("Original Capex Distribution", "MissForest-imputed Distribution")
@@ -1232,9 +1278,118 @@ After imputation, we confirmed that all target variables no longer contain missi
 ```{r}
 merged_data <- merged_data %>% 
   arrange(company, year) %>% 
-  mutate(
-    patent_intensity_sales = patent_count / sales_million
-  )
+   mutate(patent_intensity_sales = patent_count / sales_million)
+
+vars <- c("rd_million", "rd_growth_1y_percent", "rd_intensity_percent",
+          "sales_million", "sales_growth_1y_percent", 
+          "patent_count", "patent_intensity_sales")
+
+clean_data <- merged_data %>%
+  select(all_of(vars)) %>%
+  filter_all(all_vars(is.finite(.)))
+desc <- psych::describe(clean_data)[, c("mean", "sd", "min", "median", "max", "n")]
+desc <- round(desc, 2)
+
+desc$Variable <- c("R&D Expenditure (million)", 
+                   "R&D Growth Rate (%)",
+                   "R&D Intensity (%)",
+                   "Sales (million)",
+                   "Sales Growth Rate (%)",
+                   "Patent Count",
+                   "Patent Intensity (per €1M Sales)")
+
+desc <- desc[, c("Variable", "mean", "sd", "min", "median", "max", "n")]
+
+flextable(desc) %>%
+  set_header_labels(
+    mean   = "Mean",
+    sd     = "SD",
+    min    = "Min",
+    median = "Median",
+    max    = "Max",
+    n      = "N",
+    Variable = "Variable"
+  ) %>%
+  theme_booktabs() %>%
+  autofit() %>%
+  bold(part = "header") %>%
+  align(align = "left", part = "all") %>%
+  font(fontname = "Times New Roman", part = "all") 
+```
+
+```{r}
+ selected_data <- merged_data %>%
+  select(
+    company,
+    year,
+    region,
+    country,
+    icb_sector,
+    rank,
+    rd_million,
+    rd_growth_1y_percent,
+    rd_intensity_percent,
+    sales_million,
+    sales_growth_1y_percent,
+    patent_count,
+    patent_intensity_sales)
+
+variable_dict <- tibble::tibble(
+  name = c(
+    "company", "year", "region", "country", "icb_sector", "rank",
+    "rd_million", "rd_growth_1y_percent", "rd_intensity_percent",
+    "sales_million", "sales_growth_1y_percent",
+    "patent_count", "patent_intensity_sales"),
+  description = c(
+  "Legal name of the firm as reported in the dataset",
+  "calendar year corresponding to the observation",
+  "Broad geographic region where the firm is based",
+  "Country in which the firm’s headquarters is located",
+  "Industry classification based on the ICB standard",
+  "Rank based on R&D expenditure, from high to low",
+  "Total R&D expenditures reported by the firm for the year",
+  "Percentage change in R&D expenditure compared to the previous year",
+  "Ratio of R&D expenditure to total sales revenue",
+  "Total annual firm sales revenue",
+  "Percentage change in firm sales compared to the previous year",
+  "Total number of patents collected from Espacenet",
+  "Patent applications scaled by sales")
+,
+  unit = c(
+    "-", "Year", "-", "-", "-", "Index",
+    "Million EUR", "Percent", "Percent",
+    "Million EUR", "Percent",
+    "Count", "Per million EUR" ))
+variable_dict %>%
+  gt() %>%
+  cols_label(
+    name        = "Variable Name",
+    description = "Description",
+    unit        = "Unit"
+  ) %>%
+  tab_options(
+    table.font.names = "Times New Roman",
+    column_labels.font.weight = "bold",
+    table.align = "center",
+    table.width = pct(100),
+    row.striping.background_color = "gray95",
+  
+    data_row.padding = px(2),        
+    heading.padding = px(2),          
+    column_labels.padding = px(2),   
+    table.font.size = 12              
+  ) %>%
+  fmt_missing(
+    columns = everything(),
+    missing_text = "-"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_body()
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything()))
 ```
 
 ## Cross sectional analysis
@@ -1263,8 +1418,6 @@ data_2019$industry_group <- factor(data_2019$industry_group, levels = c("Top20%"
 t.test(patent_intensity_sales ~ industry_group, data = data_2019, alternative = "greater")
 
 wilcox.test(sales_growth_1y_percent ~ industry_group, data = data_2019, alternative = "greater")
-
-
 ```
 
 ```{r}
@@ -1277,8 +1430,7 @@ desc_stats <- data_2019 %>%
     mean_sales_growth = mean(sales_growth_1y_percent, na.rm = TRUE),
     sd_sales_growth   = sd(sales_growth_1y_percent,   na.rm = TRUE),
     p_value           = NA_real_,
-    .groups = "drop"
-  )
+    .groups = "drop")
 
 pat_test <- t.test(patent_intensity_sales ~ industry_group,
                    data        = data_2019,
@@ -1291,8 +1443,7 @@ pat_test <- t.test(patent_intensity_sales ~ industry_group,
     sd_pat_int       = NA_real_,
     mean_sales_growth= NA_real_,
     sd_sales_growth  = NA_real_,
-    p_value          = p.value
-  )
+    p_value          = p.value)
 
 sales_test <- wilcox.test(sales_growth_1y_percent ~ industry_group,
                           data        = data_2019,
@@ -1305,8 +1456,7 @@ sales_test <- wilcox.test(sales_growth_1y_percent ~ industry_group,
     sd_pat_int       = NA_real_,
     mean_sales_growth= NA_real_,
     sd_sales_growth  = NA_real_,
-    p_value          = p.value
-  )
+    p_value          = p.value)
 
 results_table <- bind_rows(desc_stats, pat_test, sales_test)
 
@@ -1320,14 +1470,19 @@ results_table %>%
           "SD Patent Intensity",
           "Mean Sales Growth (%)",
           "SD Sales Growth (%)",
-          "p-value"
-        ),
+          "p-value"),
         digits    = 3,
         escape    = FALSE) %>%
   kable_styling(full_width = FALSE, position = "center") %>%
-  group_rows("Descriptive Statistics",    1, nrow(desc_stats)) %>%
-  group_rows("Statistical Tests", nrow(desc_stats) + 1, nrow(results_table))
-
+  group_rows("Descriptive Statistics", 1, nrow(desc_stats), 
+             label_row_css = "font-family: 'Times New Roman'; font-weight: bold;") %>%
+  group_rows("Statistical Tests", nrow(desc_stats) + 1, nrow(results_table),
+             label_row_css = "font-family: 'Times New Roman'; font-weight: bold;") %>%
+  row_spec(0, bold = TRUE, 
+           extra_css = "font-family: 'Times New Roman'; 
+                        border-top: 2px solid black; 
+                        border-bottom: 2px solid black;") %>%
+  column_spec(1:7, extra_css = "font-family: 'Times New Roman';")
 
 ```
 
@@ -1367,8 +1522,8 @@ desc_stats_ctry <- data_2019 %>%
     mean_sales_growth = mean(sales_growth_1y_percent, na.rm = TRUE),
     sd_sales_growth   = sd(sales_growth_1y_percent,   na.rm = TRUE),
     p_value           = NA_real_,
-    .groups = "drop"
-  )
+    .groups = "drop")
+
 pat_test_ctry <- t.test(patent_intensity_sales ~ country_group,
                         data        = data_2019,
                         alternative = "greater") %>% 
@@ -1380,8 +1535,8 @@ pat_test_ctry <- t.test(patent_intensity_sales ~ country_group,
     sd_pat_int         = NA_real_,
     mean_sales_growth  = NA_real_,
     sd_sales_growth    = NA_real_,
-    p_value            = p.value
-  )
+    p_value            = p.value)
+
 sales_test_ctry <- wilcox.test(sales_growth_1y_percent ~ country_group,
                                data        = data_2019,
                                alternative = "greater") %>% 
@@ -1393,8 +1548,7 @@ sales_test_ctry <- wilcox.test(sales_growth_1y_percent ~ country_group,
     sd_pat_int         = NA_real_,
     mean_sales_growth  = NA_real_,
     sd_sales_growth    = NA_real_,
-    p_value            = p.value
-  )
+    p_value            = p.value)
 
 results_country <- bind_rows(desc_stats_ctry, pat_test_ctry, sales_test_ctry)
 
@@ -1413,9 +1567,15 @@ results_country %>%
         digits    = 3,
         escape    = FALSE) %>%
   kable_styling(full_width = FALSE, position = "center") %>%
-  group_rows("Descriptive Statistics",    1, nrow(desc_stats_ctry)) %>%
-  group_rows("Statistical Tests", nrow(desc_stats_ctry) + 1, nrow(results_country))
-
+  row_spec(0, bold = TRUE, 
+           extra_css = "font-family: 'Times New Roman'; 
+                        border-top: 2px solid black; 
+                        border-bottom: 2px solid black;") %>%
+  group_rows("Descriptive Statistics", 1, nrow(desc_stats_ctry), 
+             label_row_css = "font-family: 'Times New Roman'; font-weight: bold;") %>%
+  group_rows("Statistical Tests", nrow(desc_stats_ctry) + 1, nrow(results_country), 
+             label_row_css = "font-family: 'Times New Roman'; font-weight: bold;") %>%
+  column_spec(1:7, extra_css = "font-family: 'Times New Roman';")
 ```
 
 Firms in the top 20% of R&D-intensive countries did not show significantly higher patent intensity or sales growth compared to others. The t-test (p = 0.061) and Wilcoxon test (p = 0.125) both suggest no statistically significant differences, implying that the impact of country-level R&D intensity on firm outcomes may be weaker or less direct.
@@ -1451,8 +1611,8 @@ panel_data <- panel_data %>%
 
 ols_model <- feols(
   growth ~ rd_lag1 + growth_lag1 + size_lag1 | icb_sector + country + year,
-  data = panel_data
-)
+  data = panel_data)
+
 summary(ols_model)
 msummary(
   list("OLS Model" = ols_model),
@@ -1465,10 +1625,13 @@ msummary(
   fmt = "%.7f",
   gof_omit = "^(?!n|R2).*",  
   output = "kableExtra"
-)
+) %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  row_spec(0, bold = TRUE, extra_css = "font-family: 'Times New Roman';") %>%
+  column_spec(1:2, extra_css = "font-family: 'Times New Roman';")  
 ```
 
-The OLS regression results show that lagged R&D intensity has a positive and statistically significant effect on firm-level sales growth (coefficient = 0.0000215, p < 0.001). This means that a 1 percentage point increase in R&D intensity leads to an approximate 0.00215% increase in sales growth. Although the magnitude is small, the effect is meaningful in a log-linear model and may accumulate over time.
+The OLS regression results show that lagged R&D intensity has a positive and statistically significant effect on firm-level sales growth (coefficient = 0.0000215, p \< 0.001). This means that a 1 percentage point increase in R&D intensity leads to an approximate 0.00215% increase in sales growth. Although the magnitude is small, the effect is meaningful in a log-linear model and may accumulate over time.
 
 In contrast, lagged firm growth is significantly negative (–0.55), indicating a mean-reversion effect—firms that grew faster in the previous period tend to slow down subsequently. Lagged firm size also shows a weakly negative effect on growth, though it is not statistically significant at the 5% level.
 
@@ -1529,8 +1692,6 @@ summary(ols_model_log)
 
 ## OLS-IV
 
-1.R&D intensity
-
 ```{r}
 panel_data <- panel_data %>%
   group_by(company) %>%
@@ -1546,17 +1707,25 @@ iv_model <- feols(
 )
 summary(iv_model)
 msummary(
-  list('First Stage' = iv_model$iv_first_stage[[1]],
-       'Second Stage' = iv_model),
-  coef_map = c(patent_lag1 = 'Lagged Patents',
-               fit_rd_lag1 = 'Predicted R&D'),
+  list(
+    'First Stage' = iv_model$iv_first_stage[[1]],
+    'Second Stage' = iv_model
+  ),
+  coef_map = c(
+    patent_lag1 = 'Lagged Patents',
+    fit_rd_lag1 = 'Predicted R&D'
+  ),
   stars = c('*' = .1, '**' = .05, '***' = .01),
   fmt = "%.7f",
-  gof_omit = "^(?!n|R2).*", 
-  output = "kableExtra" )
+  gof_omit = "^(?!n|R2).*",
+  output = "kableExtra"
+) %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  row_spec(0, bold = TRUE, extra_css = "font-family: 'Times New Roman';") %>%
+  column_spec(1:3, extra_css = "font-family: 'Times New Roman';")
 ```
 
-The 2SLS regression addresses potential endogeneity in lagged R&D intensity (rd_lag1) by using lagged patent intensity (patent_lag1) as an instrument. The first-stage F-statistic is very high (30,168.7, p < 0.001), confirming that the instrument is highly relevant. The Wu-Hausman test rejects the null of exogeneity (p < 0.001), justifying the need for instrumental variable estimation.
+The 2SLS regression addresses potential endogeneity in lagged R&D intensity (rd_lag1) by using lagged patent intensity (patent_lag1) as an instrument. The first-stage F-statistic is very high (30,168.7, p \< 0.001), confirming that the instrument is highly relevant. The Wu-Hausman test rejects the null of exogeneity (p \< 0.001), justifying the need for instrumental variable estimation.
 
 In the second stage, the coefficient on fitted R&D intensity (fit_rd_lag1) is 0.0000266, which remains positive and marginally significant (p = 0.0608). This suggests that a 1 percentage point increase in R&D intensity leads to an estimated 0.00266% increase in firm sales growth.
 
@@ -1564,54 +1733,16 @@ Lagged firm growth again shows a strong negative effect (–0.55), reinforcing t
 
 Overall, the IV results provide additional support for a positive, though modest, causal effect of R&D intensity on firm-level sales growth, and strengthen confidence in the interpretation of R&D as a productive investment.
 
-2.R&D growth
-
-```{r}
-#panel_data1 <- panel_data1 %>%
-#  group_by(company) %>%
-#  arrange(year, .by_group = TRUE) %>%
-#  mutate(
-#    patent_lag1 = dplyr::lag(patent_intensity_sales, order_by = year)
-#  ) %>%
-#  ungroup()
-#iv_model_growth <- feols(
-#  growth ~ 1 + growth_lag1 + size_lag1 | icb_sector + country + year | rd_lag1 ~ patent_lag1,
-#  data = panel_data1)
-#summary(iv_model_growth)
-
-```
-
-3.R&D log level
-
-```{r}
-#panel_data2 <- panel_data2 %>%
-#  mutate(rd_log = log1p(rd_million)) %>%
-#  group_by(company) %>%
-#  arrange(year, .by_group = TRUE) %>%
-#  mutate(
-#    patent_lag1 = dplyr::lag(patent_intensity_sales, order_by = year)
-# ) %>%
-# ungroup()
-#iv_model_log <- feols(
-#  growth ~ 1 + growth_lag1 + size_lag1 | icb_sector + country + year | rd_lag1 ~ patent_lag1,
-#  data = panel_data2)
-#summary(iv_model_log)
-```
-
 ## GMM
 
 ```{r}
-
-library(plm)
 merged_data <- merged_data %>%
   mutate(
     company = as.factor(company),
-    year = as.integer(year)
-  )
+    year = as.integer(year))
 merged_data$patent_intensity_sales[!is.finite(merged_data$patent_intensity_sales)] <- NA
 pdata <- pdata.frame(merged_data, index = c("company", "year"))
 pdata <- na.omit(pdata)
-
 
 panel_ols <- plm(
   sales_growth_1y_percent ~ lag(sales_growth_1y_percent, 1) + lag(rd_intensity_percent, 1) + lag(sales_million, 1),
@@ -1634,7 +1765,7 @@ gmm_one_step <- pgmm(
   effect = "individual",
   model = "onestep",
   transformation = "d")
-#summary(gmm_one_step)
+summary(gmm_one_step)
 
 gmm_two_step <- pgmm(
   sales_growth_1y_percent ~ lag(sales_growth_1y_percent, 1) + lag(sales_million, 1)+lag(rd_intensity_percent, 1) | lag(rd_intensity_percent, 2:3)+lag(patent_intensity_sales, 1),
@@ -1642,7 +1773,7 @@ gmm_two_step <- pgmm(
   effect = "individual",
   model = "twosteps",
   transformation = "d")
-#summary(gmm_two_step)
+summary(gmm_two_step)
 
 sys_one_step <- pgmm(
   sales_growth_1y_percent ~ lag(sales_growth_1y_percent, 1) +
@@ -1656,7 +1787,7 @@ sys_one_step <- pgmm(
   transformation = "ld",         
   collapse        = TRUE    
 )
-#summary(sys_one_step)
+summary(sys_one_step)
 
 sys_two_step <- pgmm(
   sales_growth_1y_percent ~ lag(sales_growth_1y_percent, 1) +
@@ -1670,7 +1801,7 @@ sys_two_step <- pgmm(
   transformation  = "ld",         
   collapse        = TRUE          
 )
-#summary(sys_two_step)
+summary(sys_two_step)
 s <- summary(gmm_two_step)
 # Windmeijer 
 sd_robust_ols <- sqrt(vcovHC(panel_ols)[1])
@@ -1752,9 +1883,9 @@ results_table_long %>%
         escape    = FALSE,
         align     = align_vec,
         col.names = NULL) %>% 
-  kable_classic_2(full_width = FALSE, html_font = "Calibri", font_size = 14) %>% 
-  column_spec(1, width = "5cm", extra_css = "text-align:left;") %>% 
-  column_spec(2:ncol(results_table_long), extra_css = "text-align:center;") %>% 
+  kable_classic_2(full_width = FALSE, html_font = "Times New Roman", font_size = 14) %>%
+  column_spec(1, width = "5cm", extra_css = "font-family: 'Times New Roman'; text-align: left;") %>% 
+  column_spec(2:ncol(results_table_long), extra_css = "font-family: 'Times New Roman'; text-align: center;") %>% 
   add_header_above(
     c(" " = 1,
       "OLS"  = 1,
@@ -1764,9 +1895,9 @@ results_table_long %>%
       "2steps Difference-GMM" = 1,
       "1step System-GMM" = 1,
       "2steps System-GMM" = 1),
-    bold = FALSE, align = "center")
+    bold = TRUE,
+    align = "center")
 ```
-
 
 ## LP-OLS
 
@@ -1774,6 +1905,7 @@ $$
 \text{growth}_{i,t+h} = \alpha_{i,h} + \beta_{i,h} \cdot \text{RD}_{i,t} + \varepsilon_{i,t+h}
 $$
 
+1.use LP package:
 
 ```{r}
 merged_data1 <- merged_data %>%
@@ -1781,15 +1913,14 @@ merged_data1 <- merged_data %>%
     company = as.factor(company),
     year = as.factor(year),
     country = as.factor(country),
-    icb_sector = as.factor(icb_sector)
-  )
+    icb_sector = as.factor(icb_sector))
+
 contemp_data <- model.matrix(~  year + country + icb_sector, data = merged_data1)[, -1]
 contemp_data <- as.data.frame(contemp_data)
 
 endog_data <- data.frame(
   rd = merged_data$rd_intensity_percent,
-  growth = merged_data$sales_growth_1y_percent
-)
+  growth = merged_data$sales_growth_1y_percent)
 
 exog_data <- data.frame(
   sales_lag  = merged_data1$sales_million)
@@ -1805,65 +1936,120 @@ results_lp <- lp_lin(
   lags_exog      = 1,
   contemp_data   = contemp_data
 )
-summary(results_lp)
-plot(results_lp)
+```
 
-mean_array <- results_lp$irf_lin_mean
-low_array  <- results_lp$irf_lin_low
-up_array   <- results_lp$irf_lin_up
+2. step by step
+```{r}
+panel_lp_ols <- merged_data %>%
+  arrange(company, year) %>%
+  group_by(company) %>%
+  mutate(
+    rd_lag1    = dplyr::lag(rd_intensity_percent, 1),
+    sales_lag1 = dplyr::lag(sales_million, 1),
+    
+    sales_0 = dplyr::lead(sales_million, 0),
+    sales_1 = dplyr::lead(sales_million, 1),
+    sales_2 = dplyr::lead(sales_million, 2),
+    
+    growth_lead_0 = log(sales_0) - log(sales_lag1),
+    growth_lead_1 = log(sales_1) - log(sales_lag1),
+    growth_lead_2 = log(sales_2) - log(sales_lag1)
+  ) %>%
+  ungroup()
+```
 
-horizons <- 0:(dim(mean_array)[2] - 1)
+```{r}
+model_lp_h0 <- feols(
+  growth_lead_0 ~ rd_lag1 + sales_lag1 | icb_sector + country + year,
+  data = panel_lp_ols,
+  cluster = ~ company)
 
-est_rd_to_growth <- mean_array[2, , 1]
-low_rd_to_growth <- low_array[2, , 1]
-up_rd_to_growth  <- up_array[2, , 1]
+model_lp_h1 <- feols(
+  growth_lead_1 ~ rd_lag1 + sales_lag1 | icb_sector + country + year,
+  data = panel_lp_ols,
+  cluster = ~ company)
 
-df_irf <- data.frame(
-  h        = horizons,
-  estimate = est_rd_to_growth,
-  lower    = low_rd_to_growth,
-  upper    = up_rd_to_growth
-)
-df_irf1 <- df_irf %>% filter(h <= 2)
+model_lp_h2 <- feols(
+  growth_lead_2 ~ rd_lag1 + sales_lag1 | icb_sector + country + year,
+  data = panel_lp_ols,
+  cluster = ~ company)
 
-ggplot(df_irf1, aes(x = h, y = estimate)) +
-  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "#66c2a5", alpha = 0.3) +
-  geom_line(color = "#238b45", size = 1) +
-  geom_point(color = "#238b45", size = 2) +
+summary(model_lp_h0)
+summary(model_lp_h1)
+summary(model_lp_h2)
+
+extract_ci <- function(model) {
+  ci <- confint(model, level = 0.90)
+  est <- coef(model)["rd_lag1"]
+  data.frame(
+    estimate = est,
+    conf_low = ci["rd_lag1", 1],
+    conf_high = ci["rd_lag1", 2] )}
+
+irf_ols_df <- bind_rows(
+  extract_ci(model_lp_h0) %>% mutate(horizon = 0),
+  extract_ci(model_lp_h1) %>% mutate(horizon = 1),
+  extract_ci(model_lp_h2) %>% mutate(horizon = 2))
+
+plot_ols <- ggplot(irf_ols_df, aes(x = horizon, y = estimate)) +
+  geom_ribbon(aes(ymin = conf_low, ymax = conf_high),
+              fill = "#a6bddb", alpha = 0.2) +
+  geom_line(color = "#045a8d", size = 1.2) +
+  geom_point(size = 2.8, color = "#045a8d") +
+  geom_text(
+    aes(label = label_number(accuracy = 0.000001)(estimate)),
+    vjust = -1.5, hjust = 0.5,
+    size = 5, fontface = "bold", color = "#045a8d"
+  ) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
-  scale_x_continuous(breaks = df_irf$h) +
-  ylim(-0.002, 0.004) +  
+  scale_x_continuous(breaks = 0:2, expand = expansion(mult = 0.1)) + 
+  scale_y_continuous(labels = label_number(accuracy = 0.000001)) +
+  coord_cartesian(clip = "off") +
   labs(
-    title = "IRF of RD Shock on Growth ",
-    x     = "Horizon (h)",
-    y     = "Impulse Response"
+    title = "OLS: R&D on Sales Growth",
+    subtitle = "Local Projection OLS Estimates (90% CI)",
+    x = "Horizon (h)",
+    y = "IRF Estimate"
   ) +
   theme_minimal(base_size = 14) +
   theme(
-    plot.title       = element_text(hjust = 0.5, size = 16, face = "bold"),
-    axis.title       = element_text(face = "bold"),
-    panel.grid.major = element_line(color = "gray90"),
-    panel.grid.minor = element_blank()
-  )
-df_irf %>%
+    plot.title = element_text(face = "bold", size = 15, hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(size = 11),
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    plot.margin = margin(10, 20, 10, 20))
+
+plot_ols
+```
+
+```{r}
+irf_ols_df %>%
   mutate(
-    estimate = round(estimate, 6),
-    lower    = round(lower, 6),
-    upper    = round(upper, 6)
+    `IRF Estimate` = sprintf("%.8f", estimate),
+    `CI Lower` = sprintf("%.8f", conf_low),
+    `CI Upper` = sprintf("%.8f", conf_high)
   ) %>%
-  gt() %>%
-  cols_label(
-    h        = "Horizon (h)",
-    estimate = "Estimate",
-    lower    = "Lower Bound",
-    upper    = "Upper Bound"
+  select(Horizon = horizon, `IRF Estimate`, `CI Lower`, `CI Upper`) %>%
+  flextable() %>%
+  set_header_labels(
+    Horizon = "Horizon (h)",
+    `IRF Estimate` = "IRF Estimate",
+    `CI Lower` = "90% CI Lower",
+    `CI Upper` = "90% CI Upper"
   ) %>%
-  tab_header(
-    title = "Impulse Response of R&D Shock on Firm Growth")
+  autofit() %>%
+  theme_booktabs() %>%
+  fontsize(size = 11, part = "all") %>%
+  bold(part = "header") %>%
+  align(align = "center", part = "all") %>%
+  font(fontname = "Times New Roman", part = "all") 
 ```
 
 ## LP-2SLS
 
+1. use LP package
 ```{r}
 set.seed(007)
 tmp_df <- merged_data1 %>%
@@ -1948,6 +2134,114 @@ df_iv %>%
     table_body.hlines.color = "gray90")
 ```
 
+2. step by step
+```{r}
+panel_lp_2sls <- merged_data %>%
+  arrange(company, year) %>%
+  group_by(company) %>%
+  mutate(
+    rd_lag1          = dplyr::lag(rd_intensity_percent, 1),
+    sales_lag1       = dplyr::lag(sales_million, 1),
+    patent_lag1      = dplyr::lag(patent_intensity_sales, 1),
+    
+    sales_0          = dplyr::lead(sales_million, 0),
+    sales_1          = dplyr::lead(sales_million, 1),
+    sales_2          = dplyr::lead(sales_million, 2),
+    
+    growth_lead_0    = log(sales_0) - log(sales_lag1),
+    growth_lead_1    = log(sales_1) - log(sales_lag1),
+    growth_lead_2    = log(sales_2) - log(sales_lag1)
+  ) %>%
+  ungroup()
+
+lp_2sls_h0 <- feols(
+  growth_lead_0 ~ sales_lag1 | icb_sector + country + year | rd_lag1 ~ patent_lag1,
+  data = panel_lp_2sls,cluster = ~ company)
+
+lp_2sls_h1 <- feols(
+  growth_lead_1 ~ sales_lag1 | icb_sector + country + year | rd_lag1 ~ patent_lag1,
+  data = panel_lp_2sls,cluster = ~ company)
+
+lp_2sls_h2 <- feols(
+  growth_lead_2 ~ sales_lag1 | icb_sector + country + year | rd_lag1 ~ patent_lag1,
+  data = panel_lp_2sls,cluster = ~ company)
+
+summary(lp_2sls_h0)
+summary(lp_2sls_h1)
+summary(lp_2sls_h2)
+
+etable(lp_2sls_h0, lp_2sls_h1, lp_2sls_h2,
+       headers = c("H=0", "H=1", "H=2"),
+       dict = c(rd_lag1 = "Lagged R&D Intensity",
+                sales_lag1 = "Lagged Sales",
+                patent_lag1 = "Patent Intensity (IV)"))
+extract_ci <- function(model) {
+  est_name <- "fit_rd_lag1"
+  ci <- confint(model, level = 0.90)
+  est <- coef(model)[est_name]
+  data.frame(
+    estimate = est,
+    conf_low = ci[est_name, 1],
+    conf_high = ci[est_name, 2])}
+
+irf_2sls_df <- bind_rows(
+  extract_ci(lp_2sls_h0) %>% mutate(horizon = 0),
+  extract_ci(lp_2sls_h1) %>% mutate(horizon = 1),
+  extract_ci(lp_2sls_h2) %>% mutate(horizon = 2))
+
+plot_2sls <- ggplot(irf_2sls_df, aes(x = horizon, y = estimate)) +
+  geom_ribbon(aes(ymin = conf_low, ymax = conf_high),
+              fill = "#66c2a5", alpha = 0.3) +
+  geom_line(color = "#238b45", size = 1.2) +
+  geom_point(size = 2.8, color = "#238b45") +
+  geom_text(
+    aes(label = label_number(accuracy = 0.000001)(estimate)),
+    vjust = -1.5, hjust = 0.5,
+    size = 5, fontface = "bold", color = "#238b45") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
+  scale_x_continuous(breaks = 0:2, expand = expansion(mult = 0.1)) +  
+  scale_y_continuous(labels = label_number(accuracy = 0.000001)) +
+  coord_cartesian(clip = "off") +
+  labs(
+    title = "2SLS: R&D on Sales Growth",
+    subtitle = "Local Projection IV Estimates (90% CI)",
+    x = "Horizon (h)",
+    y = "IRF Estimate") +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15, hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(size = 11),
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    plot.margin = margin(10, 20, 10, 20))
+
+plot_2sls
+
+irf_2sls_df %>%
+  mutate(
+    `IRF Estimate` = sprintf("%.8f", estimate),
+    `CI Lower` = sprintf("%.8f", conf_low),
+    `CI Upper` = sprintf("%.8f", conf_high)
+  ) %>%
+  select(Horizon = horizon, `IRF Estimate`, `CI Lower`, `CI Upper`) %>%
+  flextable() %>%
+  set_header_labels(
+    Horizon = "Horizon (h)",
+    `IRF Estimate` = "IRF Estimate",
+    `CI Lower` = "90% CI Lower",
+    `CI Upper` = "90% CI Upper"
+  ) %>%
+  autofit() %>%
+  theme_booktabs() %>%
+  fontsize(size = 11, part = "all") %>%
+  bold(part = "header") %>%
+  align(align = "center", part = "all") %>%
+  font(fontname = "Times New Roman", part = "all") 
+
+plot_ols+plot_2sls
+```
 
 ## LP-GMM
 
@@ -1976,8 +2270,7 @@ data_set_df <- merged_clean %>%
     sales_million,                
     icb_sector,                
     country,
-    everything()              
-  )
+    everything())
 
 results_lp_gmm <- lp_lin_panel(
   data_set        = data_set_df,
@@ -2002,14 +2295,12 @@ results_lp_gmm <- lp_lin_panel(
   l_fd_exog_data  = NULL,
   lags_fd_exog_data = NaN,
   confint         = 1.96,
-  hor             = 5
-)
-#summary(results_lp_gmm$reg_outputs[[1]])
+  hor             = 5)
+summary(results_lp_gmm$reg_outputs[[1]])
 #summary(results_lp_gmm$reg_outputs[[2]])
 summary(results_lp_gmm$reg_outputs[[3]])
 #summary(results_lp_gmm$reg_outputs[[4]])
 #summary(results_lp_gmm$reg_outputs[[5]])
-
 ```
 
 ```{r}
@@ -2018,8 +2309,7 @@ gmm_pvals <- data.frame(
   Sargan_p = rep(NA_real_, 5),
   AB1_p    = rep(NA_real_, 5),
   AB2_p    = rep(NA_real_, 5),
-  stringsAsFactors = FALSE
-)
+  stringsAsFactors = FALSE)
 
 for (h in 1:5) {
   mod_h <- results_lp_gmm$reg_outputs[[h]]
@@ -2038,18 +2328,15 @@ for (h in 1:5) {
   
   gmm_pvals$Sargan_p[h] <- sargan_pval
   gmm_pvals$AB1_p[h]    <- ab1_pval
-  gmm_pvals$AB2_p[h]    <- ab2_pval
-}
+  gmm_pvals$AB2_p[h]    <- ab2_pval}
+
 gmm_pvals_fmt <- gmm_pvals %>%
   mutate(
     Sargan_p = ifelse(is.na(Sargan_p), "", sprintf("%.4f", Sargan_p)),
     AB1_p    = ifelse(is.na(AB1_p),    "", sprintf("%.4f", AB1_p)),
-    AB2_p    = ifelse(is.na(AB2_p),    "", sprintf("%.4f", AB2_p))
-  )
-colnames(gmm_pvals_fmt) <- c("Horizon", "Sargan p-value", "AB(1) p-value", "AB(2) p-value")
+    AB2_p    = ifelse(is.na(AB2_p),    "", sprintf("%.4f", AB2_p)))
 
-library(knitr)
-library(kableExtra)
+colnames(gmm_pvals_fmt) <- c("Horizon", "Sargan p-value", "AB(1) p-value", "AB(2) p-value")
 
 gmm_pvals_fmt %>%
   kable("html",
@@ -2058,10 +2345,10 @@ gmm_pvals_fmt %>%
         row.names = FALSE,
         caption   = "LP-GMM （Twosteps DIF-GMM）: Horizon = 1-5 "
   ) %>%
-  kable_classic_2(full_width = FALSE, html_font = "Calibri", font_size = 14) %>%
-  column_spec(1, width = "2.5cm", extra_css = "text-align:left;") %>%
-  column_spec(2:4, width = "2cm", extra_css = "text-align:center;")
-
+  kable_classic_2(full_width = FALSE, html_font = "Times New Roman", font_size = 14) %>%
+  row_spec(0, bold = TRUE, extra_css = "font-family: 'Times New Roman';") %>%
+  column_spec(1, width = "2.5cm", extra_css = "font-family: 'Times New Roman'; text-align: left;") %>%
+  column_spec(2:4, width = "2cm", extra_css = "font-family: 'Times New Roman'; text-align: center;")
 ```
 
 ## Summary Table
@@ -2076,18 +2363,6 @@ etable(ols_model, ols_model_growth, ols_model_log,
        headers = c("Intensity", "Growth", "Log Level"),
        title = "Comparison of R&D Measures in OLS Regressions",
        tex = FALSE)  
-
 ```
 
-2.Three indicators of OLS-IV
-
-```{r}
-#etable(iv_model, iv_model_growth, iv_model_log,
-#       dict = c(rd_lag1 = "R&D (Instrumented)",
-#                growth_lag1 = "Lagged Growth",
-#                size_lag1 = "Lagged Size"),
-#       headers = c("Intensity", "Growth", "Log Level"),
-#       title = "Comparison of IV Estimates Using Alternative R&D Measures",
-#       tex = FALSE) 
-```
 

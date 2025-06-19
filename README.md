@@ -1,5 +1,5 @@
 # TFM
-TThis repository is part of my Master's thesis for the **Master's in Computational Social Sciences** at **Universidad Carlos III de Madrid**.  
+This repository is part of my Master's thesis for the **Master's in Computational Social Sciences** at **Universidad Carlos III de Madrid**.  
 **Academic Year**: 2024–2025
 
 ---
